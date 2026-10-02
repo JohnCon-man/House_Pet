@@ -1,21 +1,41 @@
 # 🏡 House Pet
 
-A two-player, co-op tamagotchi for household chores. Each of you raises a pet; doing chores keeps it fed, clean, happy and rested. Built to live on a shared iPad, and works on phones too.
+A two-player, co-op tamagotchi for household chores. Each of you hatches and raises a pet; doing chores feeds, bathes, plays with and rests it. Built for a shared iPad, and plays on phones too.
 
 ## How it plays
-- **Assigned chores** recur (daily, weekly, etc.). Each type cares for your pet in a different way: 🍳 feeds, 🧽🧺 bathes, 🛒🌿 plays, 📋✨ rests.
-- **Pet stats drop over time.** Let them slide and your pet gets sad, then sick (it never dies).
-- **Shared inbox** for one-off tasks. Either of you can claim one and finish it.
-- **Capacity slider + "I could use some help".** When you're low (or you 🙋 flag a chore), your partner's side shows a 💌 help panel with **🤝 I'll do it** buttons. Low capacity also puts your pet in *rest mode*, so its needs drop more slowly.
-- **Rewards:** 🪙 coins and XP for every chore, an 🐦 bonus for doing chores early, an ✅ all-clear bonus, 🔥 streaks, 📭 inbox zero, level-ups, and achievements.
-- **💗 Hearts are earned only by helping your partner.** Spend them in the Love Shop on rare looks (🦄🦦🦉), rooms and accessories.
-- Every action has an **Undo** in case of a mis-tap.
+- **Hatch your pets.** Pick from 5 starter species, then tap your eggs to hatch them. Pets grow from baby → kid → adult as you level up, and 9 more species unlock along the way.
+- **Assigned chores** repeat on a schedule. Tap ✓ and the chore's treat flies to your pet: 🍳 feeds, 🧽🧺 bathes, 🛒🌿 plays, 📋✨ rests. Coins fly into your wallet.
+- **Pets have moods.** Needs drop over time. Pets go from thriving to sad to sick (they never die), chatter about what they need, sleep at night, and love a cuddle (tap them).
+- **Shared inbox** for one-off tasks. Either of you claims one and finishes it.
+- **Energy slider + "I could use some help".** When you're low, or you 🙋 flag a chore, your partner's pet delivers the message 💌 and their side shows **🤝 I'll do it** buttons. Low energy also puts your pet in *rest mode*, so its needs drop half as fast.
+- **Teamwork pays the most.** Helping earns 💗 hearts, the rarest currency, which buys love-only looks (🦄 Unicorn, Axolotl, Boo), rooms and accessories.
+
+### The daily loop
+- ☀️ **3 daily quests** (one is always a teamwork quest). Each one pays both of you; claim all 3 for a 🧰 bonus gift each.
+- 🎡 **Lucky wheel.** Each of you gets one spin a day, unlocked by your first chore.
+- 🎁 **Gifts** drop randomly from chores, level-ups and quests. Open them for coins, treats, hearts or stickers.
+- 📒 **Sticker album.** 24 stickers (common, rare, legendary), shared by both of you.
+- 🏡 **House level.** Every chore builds up your shared house, which unlocks decorations in both pets' rooms.
+- 🔥 Streaks, ✅ all-clear bonuses, 🐦 early bonuses, 19 trophies, and a 14-day streak calendar.
+
+Every action has an **Undo** for mis-taps.
 
 ## Running it
-It's plain HTML/CSS/JS with no build step. Open `index.html` through any static server (`python3 -m http.server`), or deploy with GitHub Pages:
+It's plain HTML/CSS/JS (ES modules) with no build step. Serve the folder with any static server, e.g. `python3 -m http.server`, then open it.
 
-1. Repo → **Settings → Pages → Source: GitHub Actions**.
-2. Merge to `main`. The workflow publishes the site.
+### GitHub Pages
+1. Repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**. Pages on a **private** repo needs a paid GitHub plan; on a free plan, make the repo public first.
+2. Push to `main`. The workflow in `.github/workflows/pages.yml` publishes the site. You can also run it by hand from the Actions tab.
 3. On the iPad, open the URL in Safari → Share → **Add to Home Screen** for a full-screen app that works offline.
 
-Data is saved in the browser on that device (localStorage). Use **Settings → Back up data / Restore backup** to move it between devices.
+Data is saved in the browser on that device. Use **Settings → Back up data / Restore backup** to move it between devices.
+
+## Code map
+| File | What it does |
+| --- | --- |
+| `src/data.js` | Game content: stats, chore types, species, shop, quests, stickers, wheel, trophies, pet lines |
+| `src/state.js` | Save/load, migration, selectors (due dates, moods, etc.) |
+| `src/game.js` | Rules: rewards, streaks, quests, gifts, wheel, house level, shop |
+| `src/pet.js` | Draws pets as SVG from parts and expressions |
+| `src/fx.js` | Synth sound effects, particles, fly-to animations, splash banners |
+| `src/main.js` | Views, interactions and animation choreography |
