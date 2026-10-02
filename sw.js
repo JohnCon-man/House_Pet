@@ -1,6 +1,6 @@
 // Network-first so updates show up immediately; cache is the offline fallback.
-const CACHE = 'housepet-v1';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icon.svg', 'icon-180.png'];
+const CACHE = 'housepet-v2';
+const FILES = ['./', 'index.html', 'style.css', 'src/main.js', 'src/data.js', 'src/state.js', 'src/game.js', 'src/pet.js', 'src/fx.js', 'manifest.json', 'icon.svg', 'icon-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
