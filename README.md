@@ -1,5 +1,7 @@
 # 🏡 House Pet
 
+**▶️ Play: https://johncon-man.github.io/House_Pet/**
+
 A two-player, co-op tamagotchi for household chores. Each of you hatches and raises a pet; doing chores feeds, bathes, plays with and rests it. Built for a shared iPad, and plays on phones too.
 
 ## How it plays
@@ -24,9 +26,10 @@ Every action has an **Undo** for mis-taps.
 It's plain HTML/CSS/JS (ES modules) with no build step. Serve the folder with any static server, e.g. `python3 -m http.server`, then open it.
 
 ### GitHub Pages
-1. Repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**. Pages on a **private** repo needs a paid GitHub plan; on a free plan, make the repo public first.
-2. Push to `main`. The workflow in `.github/workflows/pages.yml` publishes the site. You can also run it by hand from the Actions tab.
-3. On the iPad, open the URL in Safari → Share → **Add to Home Screen** for a full-screen app that works offline.
+Pages is already set up (Settings → Pages → Source: GitHub Actions). Every push to `main` redeploys the site through `.github/workflows/pages.yml`. You can also run it by hand from the Actions tab.
+
+1. Merge changes into `main` and wait about a minute for the deploy.
+2. On the iPad, open the link above in Safari → Share → **Add to Home Screen** for a full-screen app that works offline.
 
 Data is saved in the browser on that device. Use **Settings → Back up data / Restore backup** to move it between devices.
 
