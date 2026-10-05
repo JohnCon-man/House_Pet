@@ -12,7 +12,7 @@ export const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<':
 export const newPlayer = (id, name, pet, species, color) => ({
   id, name, color, coins: 20, hearts: 0, xp: 0, level: 1, streak: 0, lastDay: null, clearDay: null,
   capacity: 70, needHelp: false, owned: [], ach: [], gifts: 1, days: [],
-  n: { done: 0, helped: 0, early: 0, inbox: 0, clear: 0, gifts: 0 },
+  n: { done: 0, helped: 0, early: 0, inbox: 0, clear: 0, gifts: 0, together: 0 },
   pet: { name: pet, species, acc: null, room: 'home', food: 75, clean: 75, fun: 75, energy: 75, hatched: false },
 });
 
@@ -96,6 +96,9 @@ export function choreInfo(c) {
   return { k: 'later', d, label: d === 1 ? 'Tomorrow' : `In ${d} days` };
 }
 const ORDER = { over: 0, today: 1, later: 2, done: 3 };
-export const choresOf = id => S().chores.filter(c => c.owner === id).map(c => ({ c, i: choreInfo(c) }))
+// Shared ('both') chores show up in both players' lists.
+export const choresOf = id => S().chores.filter(c => c.owner === id || c.owner === 'both').map(c => ({ c, i: choreInfo(c) }))
   .sort((a, b) => ORDER[a.i.k] - ORDER[b.i.k] || a.i.d - b.i.d);
-export const dueCount = id => choresOf(id).filter(x => x.i.k === 'over' || x.i.k === 'today').length;
+export const inboxOf = id => S().inbox.filter(it => it.claimedBy === id || it.claimedBy === 'both');
+export const dueCount = id => choresOf(id).filter(x => x.i.k === 'over' || x.i.k === 'today').length + inboxOf(id).length;
+export const ownerName = id => id === 'both' ? 'both of you' : P(id)?.name || '';

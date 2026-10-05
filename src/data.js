@@ -121,6 +121,7 @@ export const ACH = [
   { id: 'fifty',    e: '🏅', name: 'Home Hero',     desc: 'Complete 50 chores',            t: p => p.n.done >= 50,   coins: 75 },
   { id: 'hundred',  e: '💯', name: 'Centurion',     desc: 'Complete 100 chores',           t: p => p.n.done >= 100,  coins: 150 },
   { id: 'help1',    e: '🤝', name: 'Helping Paw',   desc: 'Help your partner',             t: p => p.n.helped >= 1,  coins: 15 },
+  { id: 'together5', e: '👫', name: 'Better Together', desc: 'Finish 5 tasks together',   t: p => p.n.together >= 5, coins: 40 },
   { id: 'help10',   e: '💞', name: 'Dream Team',    desc: 'Help your partner 10 times',    t: p => p.n.helped >= 10, coins: 60 },
   { id: 'early5',   e: '🐦', name: 'Early Bird',    desc: 'Do 5 chores ahead of schedule', t: p => p.n.early >= 5,   coins: 30 },
   { id: 'inbox5',   e: '📥', name: 'Inbox Raider',  desc: 'Finish 5 inbox tasks',          t: p => p.n.inbox >= 5,   coins: 30 },

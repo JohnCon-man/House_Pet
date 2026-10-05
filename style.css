@@ -376,6 +376,23 @@ input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 
 .decor.d7 { animation: none; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
+/* ===== Up for grabs (floating inbox tasks) & together tasks ===== */
+.floaters { background: linear-gradient(135deg, #f0f9ff 0%, #fdf4ff 100%); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 18px; }
+.floaters .q-head h2 { margin: 0; }
+.float-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.floater { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fff; border: 3px solid color-mix(in srgb, var(--cc) 45%, white); border-radius: 20px;
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--cc) 25%, transparent); animation: floaty 3.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.floater:active, .floater:focus-within { animation-play-state: paused; }
+.floater.urgent { border-color: #ffb4a8; background: #fff7f5; }
+.f-top { display: flex; align-items: center; gap: 10px; }
+.floater .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.floater .btn { flex: 1 1 auto; min-height: 42px; padding: 4px 10px; font-size: .92rem; }
+.floater .mini-pet, .inbox .mini-pet { width: 26px; height: 26px; }
+.btn.claim.together { background: linear-gradient(135deg, var(--pink), var(--purple)); color: #fff; border-color: transparent; box-shadow: 0 4px 0 #6d28d9; }
+.together-tag { color: var(--purple); font-weight: 800; }
+.chore.from-inbox { border-style: dashed; border-color: color-mix(in srgb, var(--cc) 55%, white); background: linear-gradient(90deg, #fff, #fbf7ff); }
+@keyframes floaty { 0%, 100% { transform: translateY(0) rotate(-.4deg); } 50% { transform: translateY(-6px) rotate(.4deg); } }
+
 /* ===== Phones ===== */
 @media (max-width: 760px) {
   .duo { grid-template-columns: 1fr; }
