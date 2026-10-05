@@ -8,7 +8,9 @@ A two-player, co-op tamagotchi for household chores. Each of you hatches and rai
 - **Hatch your pets.** Pick from 5 starter species, then tap your eggs to hatch them. Pets grow from baby → kid → adult as you level up, and 9 more species unlock along the way.
 - **Assigned chores** repeat on a schedule. Tap ✓ and the chore's treat flies to your pet: 🍳 feeds, 🧽🧺 bathes, 🛒🌿 plays, 📋✨ rests. Coins fly into your wallet.
 - **Pets have moods.** Needs drop over time. Pets go from thriving to sad to sick (they never die), chatter about what they need, sleep at night, and love a cuddle (tap them).
-- **Shared inbox** for one-off tasks. Either of you claims one and finishes it.
+- **Shared inbox** for one-off tasks. Assign each to one of you, to both of you, or leave it up for grabs. Once it's claimed, it shows in that person's task list on Home.
+- **🎈 Up for grabs.** Unclaimed inbox tasks can float on the Home screen, so whoever has the energy can grab one with a tap. Tap ↩️ to put a task back.
+- **👫 Together tasks.** Any recurring chore or inbox task can belong to both of you. It shows in both lists, and finishing it rewards both players and feeds both pets.
 - **Energy slider + "I could use some help".** When you're low, or you 🙋 flag a chore, your partner's pet delivers the message 💌 and their side shows **🤝 I'll do it** buttons. Low energy also puts your pet in *rest mode*, so its needs drop half as fast.
 - **Teamwork pays the most.** Helping earns 💗 hearts, the rarest currency, which buys love-only looks (🦄 Unicorn, Axolotl, Boo), rooms and accessories.
 

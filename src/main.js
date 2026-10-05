@@ -1,6 +1,6 @@
 // UI: views, interactions and the animation choreography around game actions.
 import * as D from './data.js';
-import { store, save, esc, P, partner, spec, xpNeed, needsHelp, helpAsks, streakNow, hasSpecies, capLabel, stage, timeOfDay, isNight, mood, choresOf, dueCount, defaultState, migrate, dayKey, addDays } from './state.js';
+import { store, save, esc, P, partner, spec, xpNeed, needsHelp, helpAsks, streakNow, hasSpecies, capLabel, stage, timeOfDay, isNight, mood, choresOf, inboxOf, dueCount, ownerName, defaultState, migrate, dayKey, addDays } from './state.js';
 import * as G from './game.js';
 import { petSVG, eggSVG } from './pet.js';
 import { sfx, confetti, burst, popText, fly, countUp, splash, center, wait } from './fx.js';
@@ -74,19 +74,34 @@ function roomScene(p) {
   </div>`;
 }
 
+const togetherTag = '<span class="together-tag">👫 Together</span>';
+
 function choreRow({ c, i }, by, helping) {
-  const cat = D.CATS[c.cat];
-  const tags = [i.label, everyLabel(c.every), c.helpReq && '<em>🙋 asked for help</em>', i.d > 0 && i.k !== 'done' && '<span class="early">🐦 early bonus</span>'].filter(Boolean).join(' · ');
+  const cat = D.CATS[c.cat], shared = c.owner === 'both';
+  const tags = [shared && togetherTag, i.label, everyLabel(c.every), c.helpReq && '<em>🙋 asked for help</em>', i.d > 0 && i.k !== 'done' && '<span class="early">🐦 early bonus</span>'].filter(Boolean).join(' · ');
   const btns = i.k === 'done' ? '<span class="check done" aria-label="Done">✓</span>' : helping
     ? `<button class="btn help" data-act="do" data-id="${c.id}" data-by="${by}">🤝 I'll do it</button>`
-    : `<button class="icon-btn${c.helpReq ? ' on' : ''}" data-act="ask" data-id="${c.id}" aria-label="Ask for help">🙋</button>
+    : `${shared ? '' : `<button class="icon-btn${c.helpReq ? ' on' : ''}" data-act="ask" data-id="${c.id}" aria-label="Ask for help">🙋</button>`}
        <button class="check" data-act="do" data-id="${c.id}" data-by="${by}" aria-label="Mark done">✓</button>`;
   return `<li class="chore k-${i.k}" style="--cc:${cat.color}"><span class="cat-badge">${cat.icon}</span>
     <div class="ct"><b>${esc(c.title)}</b><small>${tags}</small></div>${btns}</li>`;
 }
 
+// An inbox task someone claimed, shown in their task list on Home.
+function inboxRow(it) {
+  const cat = D.CATS[it.cat];
+  const tags = ['📥 Inbox task', it.claimedBy === 'both' && togetherTag, it.urgent && '<em>🔥 Urgent</em>'].filter(Boolean).join(' · ');
+  return `<li class="chore k-today from-inbox" style="--cc:${cat.color}"><span class="cat-badge">${cat.icon}</span>
+    <div class="ct"><b>${esc(it.title)}</b><small>${tags}</small></div>
+    <button class="icon-btn" data-act="release" data-id="${it.id}" aria-label="Put back up for grabs">↩️</button>
+    <button class="check" data-act="doInbox" data-id="${it.id}" aria-label="Mark done">✓</button></li>`;
+}
+
+const claimBtns = it => S().players.map(p => `<button class="btn claim" style="--c:${p.color}" data-act="claim" data-id="${it.id}" data-p="${p.id}">${miniPet(p)} ${esc(p.name)}</button>`).join('')
+  + `<button class="btn claim together" data-act="claim" data-id="${it.id}" data-p="both">👫 Together</button>`;
+
 function helpPanel(p, q) {
-  const list = choresOf(q.id).filter(x => x.c.helpReq || x.i.k === 'over' || x.i.k === 'today');
+  const list = choresOf(q.id).filter(x => x.c.owner === q.id && (x.c.helpReq || x.i.k === 'over' || x.i.k === 'today'));
   const why = [q.needHelp && 'asked for a hand', q.capacity < 35 && `is ${capLabel(q.capacity)[1].toLowerCase()}`, helpAsks(q).length && `flagged ${helpAsks(q).length} chore${helpAsks(q).length > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
   return `<div class="help-panel"><div class="help-h"><span class="envelope">💌</span><div><b>${esc(q.pet.name)} needs a hand!</b><small>${esc(q.name)} ${why}</small></div></div>
     ${list.length ? `<ul class="chores">${list.map(x => choreRow(x, p.id, true)).join('')}</ul>`
@@ -111,8 +126,8 @@ function playerCol(p) {
       <button class="pill-btn${p.needHelp ? ' on' : ''}" data-act="needHelp" data-p="${p.id}">${p.needHelp ? '🆘 Help requested · tap to cancel' : '🙋 I could use some help'}</button>
       ${p.capacity < 35 ? '<p class="tiny">🛌 Rest mode: your pet’s needs drop half as fast while you recharge.</p>' : ''}
     </div>
-    <h3>My chores ${due ? `<span class="badge">${due} due</span>` : '<span class="badge ok">all clear ✨</span>'}</h3>
-    <ul class="chores">${list.map(x => choreRow(x, p.id)).join('') || '<li class="empty">No chores yet — add some in ⚙️ Settings.</li>'}</ul>
+    <h3>My tasks ${due ? `<span class="badge">${due} to do</span>` : '<span class="badge ok">all clear ✨</span>'}</h3>
+    <ul class="chores">${inboxOf(p.id).map(inboxRow).join('')}${list.map(x => choreRow(x, p.id)).join('') || '<li class="empty">No chores yet — add some in ⚙️ Settings.</li>'}</ul>
   </section>`;
 }
 
@@ -130,30 +145,46 @@ function questStrip() {
     }).join('')}</div></section>`;
 }
 
+// Unclaimed inbox tasks marked to float on Home, so either of you can grab one.
+function floatStrip() {
+  const items = S().inbox.filter(it => !it.claimedBy && it.float !== false).sort((a, b) => b.urgent - a.urgent || a.created - b.created);
+  if (!items.length) return '';
+  return `<section class="floaters"><div class="q-head"><h2>🎈 Up for grabs</h2><span class="tiny">Grab one for +15🪙 and a 30% gift chance, or team up 👫</span></div>
+    <div class="float-list">${items.map((it, n) => {
+      const cat = D.CATS[it.cat];
+      return `<div class="floater${it.urgent ? ' urgent' : ''}" style="--cc:${cat.color};--d:${(n % 4) * -0.8}s">
+        <div class="f-top"><span class="cat-badge">${cat.icon}</span><div class="ct"><b>${esc(it.title)}</b><small>${it.urgent ? '🔥 Urgent' : cat.label}</small></div></div>
+        <div class="acts">${claimBtns(it)}</div></div>`;
+    }).join('')}</div></section>`;
+}
+
 /* ---------- Views ---------- */
 function homeView() {
-  return `${questStrip()}<div class="focus-bar">${chips('focus', ui.focus)}</div>
+  return `${questStrip()}${floatStrip()}<div class="focus-bar">${chips('focus', ui.focus)}</div>
     <div class="duo" data-focus="${ui.focus}">${S().players.map(playerCol).join('')}</div>`;
 }
 
 function inboxView() {
   const items = [...S().inbox].sort((a, b) => b.urgent - a.urgent || a.created - b.created);
   return `<section class="card"><h2>📥 Shared Inbox</h2>
-    <p class="muted">Drop in anything that needs doing. Whoever has the energy grabs it. Inbox jobs pay <b>+15🪙</b>, a 30% gift chance, and <b>💗</b> if your partner is struggling.</p>
+    <p class="muted">Drop in anything that needs doing. Assign it to one of you, to both of you 👫, or leave it up for grabs. 🎈 Floating tasks show on Home so whoever has the energy can grab them. Inbox jobs pay <b>+15🪙</b>, a 30% gift chance, and <b>💗</b> if your partner is struggling.</p>
     <form data-form="inbox" class="row">
       <input name="task" placeholder="e.g. Clean out the fridge" maxlength="80" required autocomplete="off">
       <select name="cat">${catOpts('cleaning')}</select>
+      <select name="who" aria-label="Assign to">${opts([['', '🎈 Up for grabs'], ...S().players.map(p => [p.id, `→ ${esc(p.name)}`]), ['both', '👫 Together']], '')}</select>
+      <label class="chk"><input type="checkbox" name="float" checked> 🎈 Float on Home</label>
       <label class="chk"><input type="checkbox" name="urgent"> 🔥 Urgent</label>
       <button class="btn primary">Add</button>
     </form>
     <ul class="inbox">${items.map(it => {
-      const who = it.claimedBy && P(it.claimedBy), cat = D.CATS[it.cat];
-      return `<li class="${it.urgent ? 'urgent' : ''}" style="--cc:${cat.color};${who ? `--c:${who.color}` : ''}">
+      const cat = D.CATS[it.cat], both = it.claimedBy === 'both', who = it.claimedBy && !both && P(it.claimedBy);
+      const status = both ? 'Assigned to both of you 👫' : who ? `Assigned to ${esc(who.name)}` : it.float !== false ? '🎈 Up for grabs · floating on Home' : 'Up for grabs';
+      return `<li class="${it.urgent ? 'urgent' : ''}" style="--cc:${cat.color};${who ? `--c:${who.color}` : both ? '--c:#8b5cf6' : ''}">
         <span class="cat-badge">${cat.icon}</span>
-        <div class="ct"><b>${esc(it.title)}</b><small>${it.urgent ? '🔥 Urgent · ' : ''}${who ? `Claimed by ${esc(who.name)}` : 'Up for grabs'}</small></div>
-        <div class="acts">${who
-          ? `<button class="btn primary" data-act="doInbox" data-id="${it.id}">✓ Done</button><button class="icon-btn" data-act="release" data-id="${it.id}" aria-label="Release">↩️</button>`
-          : S().players.map(p => `<button class="btn claim" style="--c:${p.color}" data-act="claim" data-id="${it.id}" data-p="${p.id}">${miniPet(p)} ${esc(p.name)}</button>`).join('')}
+        <div class="ct"><b>${esc(it.title)}</b><small>${it.urgent ? '🔥 Urgent · ' : ''}${status}</small></div>
+        <div class="acts">${it.claimedBy
+          ? `<button class="btn primary" data-act="doInbox" data-id="${it.id}">✓ Done</button><button class="icon-btn" data-act="release" data-id="${it.id}" aria-label="Put back up for grabs">↩️</button>`
+          : `${claimBtns(it)}<button class="icon-btn${it.float !== false ? ' on' : ''}" data-act="floatToggle" data-id="${it.id}" aria-label="Float on Home">🎈</button>`}
           <button class="icon-btn" data-act="delInbox" data-id="${it.id}" aria-label="Delete">🗑️</button></div></li>`;
     }).join('') || '<li class="empty">📭 Inbox zero. Your pets are proud.</li>'}</ul></section>`;
 }
@@ -215,7 +246,7 @@ function albumView() {
 }
 
 function settingsView() {
-  const people = S().players.map(p => [p.id, esc(p.name)]);
+  const people = [...S().players.map(p => [p.id, esc(p.name)]), ['both', '👫 Together']];
   return `<section class="card"><h2>👥 Players</h2><div class="duo all">${S().players.map(p => `<div class="fields" style="--c:${p.color}">
       <label>Name <input value="${esc(p.name)}" data-chg="player.name" data-p="${p.id}" maxlength="20"></label>
       <label>Pet name <input value="${esc(p.pet.name)}" data-chg="player.pet.name" data-p="${p.id}" maxlength="20"></label>
@@ -354,20 +385,24 @@ async function finishTask(el, run) {
   G.checkAch(); save(); render();
   animateStats(before);
   sfx('done');
-  const petEl = $(`#pet-${res.owner.id}`);
-  fly(from, petEl, D.STATS[res.stat].fly, { size: 44, dur: 800 }).then(() => {
-    react(res.owner.id, 'eat', 1300); sfx('chomp');
-    if (petEl) { const c = center(petEl); popText(c.x, c.y - 50, `+30 ${D.STATS[res.stat].icon}`, D.STATS[res.stat].color); burst(c.x, c.y, [D.STATS[res.stat].icon, '✨'], 6, 70); }
-    setTimeout(() => say(res.owner.id, pick(D.LINES.happy)), 1300);
+  // Treat flies to each pet the task cared for (skip pets hidden by the phone player switcher).
+  res.owners.forEach((o, n) => {
+    const petEl = $(`#pet-${o.id}`), seen = petEl && petEl.offsetParent !== null;
+    (seen ? fly(from, petEl, D.STATS[res.stat].fly, { size: 44, dur: 800, delay: n * 150 }) : wait(800)).then(() => {
+      react(o.id, res.together ? 'love' : 'eat', 1300); if (!n) sfx('chomp');
+      if (seen) { const c = center(petEl); popText(c.x, c.y - 50, `+30 ${D.STATS[res.stat].icon}`, D.STATS[res.stat].color); burst(c.x, c.y, [D.STATS[res.stat].icon, '✨'], 6, 70); }
+      setTimeout(() => say(o.id, res.together ? pick(['Teamwork! 👫', 'We did it together! 💞', 'Best team ever! ✨']) : pick(D.LINES.happy)), 1300 + n * 400);
+    });
   });
+  if (res.together) splash('Better together!', `Both of you · +${res.coins}🪙 +${res.hearts}💗 each`, { color: '#8b5cf6', icon: '👫', onShow: () => { sfx('team'); confetti(['👫', '💞', '✨', '🎉']); } });
   if (res.helped) {
     setTimeout(() => react(res.doer.id, 'love', 2000), 300);
     splash('Teamwork!', `${esc(res.doer.name)} helped ${esc(res.owner.name)} · +${res.hearts} 💗`, { color: res.doer.color, icon: '🤝', onShow: () => { sfx('team'); confetti(['💖', '🤝', '💕', '✨']); } });
   }
-  toast(`${res.icon} <b>${esc(res.title)}</b> +${res.coins}🪙${res.hearts ? ` +${res.hearts}💗` : ''} +${res.xp}⭐${res.notes.length ? `<small>${res.notes.map(esc).join(' · ')}</small>` : ''}`, true);
+  toast(`${res.icon} <b>${esc(res.title)}</b> +${res.coins}🪙${res.hearts ? ` +${res.hearts}💗` : ''} +${res.xp}⭐${res.together ? ' each' : ''}${res.notes.length ? `<small>${res.notes.map(esc).join(' · ')}</small>` : ''}`, true);
   await animateWallets(before, from);
   if (res.gift) {
-    const g = $(`#gift-${res.doer.id}`);
+    const g = $(`#gift-${res.giftTo.id}`);
     await fly(from, g, '🎁', { size: 48, dur: 900 });
     sfx('buy'); if (g) { const c = center(g); popText(c.x, c.y - 30, 'Gift found!', '#f59e0b'); burst(c.x, c.y, ['🎁', '✨'], 8, 60); }
   }
@@ -463,8 +498,14 @@ const ACTIONS = {
     if (q && !q.claimed && q.prog >= G.questDef('cuddle').goal && ui.view === 'home') { const strip = $('.quests'); strip && (strip.outerHTML = questStrip()); }
     playEvents();
   },
-  claim: el => { S().inbox.find(x => x.id === el.dataset.id).claimedBy = el.dataset.p; sfx('pop'); save(); render(); },
-  release: el => { S().inbox.find(x => x.id === el.dataset.id).claimedBy = null; save(); render(); },
+  claim: el => {
+    const it = S().inbox.find(x => x.id === el.dataset.id), c = center(el);
+    it.claimedBy = el.dataset.p; G.log(`${ownerName(it.claimedBy)} grabbed “${it.title}”`);
+    save(); render(); sfx('pop'); burst(c.x, c.y, ['🎈', '✨'], 8, 70);
+    toast(`📌 <b>${esc(it.title)}</b> is on ${it.claimedBy === 'both' ? 'both of your lists 👫' : `${esc(P(it.claimedBy).name)}’s list`}`);
+  },
+  release: el => { const it = S().inbox.find(x => x.id === el.dataset.id); it.claimedBy = null; it.float = true; save(); render(); toast('🎈 Back up for grabs'); },
+  floatToggle: el => { const it = S().inbox.find(x => x.id === el.dataset.id); it.float = it.float === false; sfx('tap'); save(); render(); },
   delInbox: el => { snap(); S().inbox = S().inbox.filter(x => x.id !== el.dataset.id); save(); render(); toast('🗑️ Removed', true); },
   shopFor: el => { ui.shopFor = el.dataset.p; sfx('tap'); render(); },
   buy: el => {
@@ -528,7 +569,9 @@ const FORMS = {
   },
   inbox: f => {
     const title = f.elements.task.value.trim(); if (!title) return;
-    G.addInbox(title, f.cat.value, f.urgent.checked); save(); render(); sfx('pop'); toast('📥 Added to the inbox');
+    const who = f.who.value || null;
+    G.addInbox(title, f.cat.value, f.urgent.checked, who, f.float.checked); save(); render(); sfx('pop');
+    toast(who ? `📌 Added to ${who === 'both' ? 'both of your lists 👫' : `${esc(P(who).name)}’s list`}` : f.float.checked ? '🎈 Floating on Home for whoever grabs it' : '📥 Added to the inbox');
     $('form[data-form=inbox] [name=task]')?.focus();
   },
   chore: f => {

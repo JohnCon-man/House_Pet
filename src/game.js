@@ -101,9 +101,38 @@ export function claimQuest(id) {
 }
 
 /* ---------- Chores ---------- */
+// A task assigned to both players: both pets get cared for and both players are rewarded.
+function doTogether({ title, catId, early = false, inbox = false, urgent = false, finish }) {
+  const ps = S().players, cat = CATS[catId], notes = ['👫 Together +1💗 each'];
+  const base = { coins: 15 + (inbox ? 5 : 0) + (urgent ? 5 : 0), xp: 20, hearts: 1 };
+  if (early) { base.coins += 8; notes.push('🐦 Early +8'); }
+  finish();
+  let giftTo = null;
+  for (const p of ps) {
+    const r = { ...base };
+    feed(p, cat.stat, 30);
+    r.coins += bumpStreak(p);
+    p.n.done++; p.n.together++;
+    if (early) p.n.early++;
+    if (inbox) p.n.inbox++;
+    allClear(p, r, notes);
+    if (Math.random() < 0.25) { p.gifts++; giftTo = giftTo || p; }
+    award(p, r);
+    emit('chore', { cat: catId, stat: cat.stat, who: p.id });
+  }
+  houseXP(25);
+  emit('help');
+  if (early) emit('early');
+  if (inbox) emit('inbox');
+  log(`${ps[0].name} & ${ps[1].name} did “${title}” together 👫`);
+  return { ...base, notes: [...new Set(notes)], gift: !!giftTo, giftTo, together: true, stat: cat.stat, doer: ps[0], owners: ps, title, icon: cat.icon };
+}
+
 export function doChore(id, byId) {
   const c = S().chores.find(x => x.id === id); if (!c) return null;
-  const doer = P(byId), owner = P(c.owner), info = choreInfo(c), helped = byId !== c.owner, cat = CATS[c.cat];
+  const info = choreInfo(c), cat = CATS[c.cat];
+  if (c.owner === 'both') return doTogether({ title: c.title, catId: c.cat, early: info.d > 0, finish: () => { c.lastDone = Date.now(); c.helpReq = false; } });
+  const doer = P(byId), owner = P(c.owner), helped = byId !== c.owner;
   const r = { coins: 10, xp: 15, hearts: 0 }, notes = [];
   feed(owner, cat.stat, 30);
   const early = info.d > 0;
@@ -125,16 +154,18 @@ export function doChore(id, byId) {
   if (early) emit('early');
   if (helped) emit('help');
   log(`${doer.name} did “${c.title}”${helped ? ` for ${owner.name} 🤝` : ''}`);
-  return { ...r, notes, gift, helped, stat: cat.stat, doer, owner, title: c.title, icon: cat.icon };
+  return { ...r, notes, gift, giftTo: gift ? doer : null, helped, stat: cat.stat, doer, owner, owners: [owner], title: c.title, icon: cat.icon };
 }
 
-export function addInbox(title, cat, urgent) {
-  S().inbox.push({ id: uid(), title, cat, urgent, claimedBy: null, created: Date.now() });
+// who: null (up for grabs), a player id, or 'both'. float: show unclaimed task on the Home screen.
+export function addInbox(title, cat, urgent, who = null, float = true) {
+  S().inbox.push({ id: uid(), title, cat, urgent, claimedBy: who || null, float, created: Date.now() });
   log(`New inbox task: “${title}”`);
 }
 
 export function doInbox(id) {
   const it = S().inbox.find(x => x.id === id); if (!it?.claimedBy) return null;
+  if (it.claimedBy === 'both') return doTogether({ title: it.title, catId: it.cat, inbox: true, urgent: it.urgent, finish: () => { S().inbox = S().inbox.filter(x => x !== it); } });
   const doer = P(it.claimedBy), q = partner(doer), stat = CATS[it.cat].stat;
   const r = { coins: 15 + (it.urgent ? 5 : 0), xp: 20, hearts: 0 }, notes = [];
   feed(doer, stat, 30); feed(q, stat, 10);
@@ -149,7 +180,7 @@ export function doInbox(id) {
   houseXP(15);
   emit('chore', { cat: it.cat, stat, who: doer.id }); emit('inbox');
   log(`${doer.name} finished inbox task “${it.title}”`);
-  return { ...r, notes, gift, stat, doer, owner: doer, title: it.title, icon: CATS[it.cat].icon };
+  return { ...r, notes, gift, giftTo: gift ? doer : null, stat, doer, owner: doer, owners: [doer], title: it.title, icon: CATS[it.cat].icon };
 }
 
 /* ---------- Pets, gifts, wheel, shop ---------- */
