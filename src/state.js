@@ -1,5 +1,5 @@
 // Game state: persistence, migration and read-only selectors.
-import { KEY, DAY, STATS, COLORS, SPECIES, ROOMS } from './data.js';
+import { KEY, DAY, STATS, COLORS, SPECIES, ROOMS, COATS, RP_STATS } from './data.js';
 
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, v));
@@ -12,7 +12,7 @@ export const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<':
 export const newPlayer = (id, name, pet, species, color) => ({
   id, name, color, coins: 20, hearts: 0, xp: 0, level: 1, streak: 0, lastDay: null, clearDay: null,
   capacity: 70, needHelp: false, owned: [], ach: [], gifts: 1, days: [],
-  n: { done: 0, helped: 0, early: 0, inbox: 0, clear: 0, gifts: 0, together: 0 },
+  n: { done: 0, helped: 0, early: 0, inbox: 0, clear: 0, gifts: 0, together: 0, care: 0 },
   pet: { name: pet, species, acc: null, room: 'home', food: 75, clean: 75, fun: 75, energy: 75, hatched: false },
 });
 
@@ -31,7 +31,7 @@ export function defaultState() {
     chores: seed.map(([title, cat, owner, every], i) =>
       ({ id: uid(), title, cat, owner, every, start: addDays(t, i % Math.min(every, 3)), lastDone: null, helpReq: false })),
     inbox: [{ id: uid(), title: 'Fix the squeaky door', cat: 'other', claimedBy: null, urgent: false, created: Date.now() }],
-    house: { xp: 0, level: 1 }, album: {}, daily: null, stats: { quests: 0 },
+    house: { xp: 0, level: 1 }, album: {}, daily: null, stats: { quests: 0 }, realPets: [],
   };
 }
 
@@ -101,5 +101,25 @@ const ORDER = { over: 0, today: 1, later: 2, done: 3 };
 export const choresOf = id => S().chores.filter(c => c.owner === id || c.owner === 'both').map(c => ({ c, i: choreInfo(c) }))
   .sort((a, b) => ORDER[a.i.k] - ORDER[b.i.k] || a.i.d - b.i.d);
 export const inboxOf = id => S().inbox.filter(it => it.claimedBy === id || it.claimedBy === 'both');
+/* ---------- Real-life pets ---------- */
+export const newRealPet = (kind = 'dog', name = '') => ({
+  id: 'rp-' + uid(), name: name || (kind === 'cat' ? 'Whiskers' : 'Buddy'), kind, coat: COATS[kind][0].id,
+  custom: null, photo: null, food: 80, joy: 80, fresh: 80, day: null, done: {},
+});
+export const rpById = id => (S().realPets || []).find(r => r.id === id);
+// custom = colors read from a photo; otherwise the chosen preset coat.
+export const coatOf = rp => {
+  const preset = COATS[rp.kind].find(c => c.id === rp.coat) || COATS[rp.kind][0];
+  return rp.custom ? { ...preset, ...rp.custom, spots: null, stripes: null } : preset;
+};
+export const rpModel = rp => ({ pet: { species: rp.kind, acc: null } });
+export const rpHealth = rp => Object.keys(RP_STATS).reduce((a, k) => a + rp[k], 0) / 3;
+export const rpDone = (rp, key) => rp.day === dayKey() ? (rp.done[key] || 0) : 0;
+export const rpMood = rp => {
+  const h = rpHealth(rp);
+  return h >= 75 ? { exp: 'happy', label: 'Happy & cared for', e: '😊' } : h >= 50 ? { exp: 'ok', label: 'Doing fine', e: '🙂' }
+    : { exp: 'sad', label: 'Needs some care', e: '🥺' };
+};
+
 export const dueCount = id => choresOf(id).filter(x => x.i.k === 'over' || x.i.k === 'today').length + inboxOf(id).length;
 export const ownerName = id => id === 'both' ? 'both of you' : P(id)?.name || '';

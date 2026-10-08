@@ -14,6 +14,7 @@ A tamagotchi for household chores. Play **solo (1 player)** or **co-op (2 player
 - **🎈 Up for grabs.** Unclaimed inbox tasks can float on the Home screen, so whoever has the energy can grab one with a tap. Tap ↩️ to put a task back.
 - **👫 Together tasks.** Any recurring chore or inbox task can belong to both of you. It shows in both lists, and finishing it rewards both players and feeds both pets.
 - **Energy slider + "I could use some help".** When you're low, or you 🙋 flag a chore, your partner's pet delivers the message 💌 and their side shows **🤝 I'll do it** buttons. Low energy also puts your pet in *rest mode*, so its needs drop half as fast.
+- **🐾 Real pets (optional).** Add up to 4 real cats and dogs at setup or in ⚙️ Settings. Each gets an animated virtual twin in one of 8 common coats, or in colors matched from a photo you add (done on the device, no upload). Real-life care keeps the twin happy: 🍖 Feed, 🦮 Walk (dogs), 🧶 Play (cats), 💧 Water and 🧹 Litter (cats). Each task pays +5🪙 and counts toward daily quests and the Pet Parent trophy. See [docs/PET_PHOTO_PLAN.md](docs/PET_PHOTO_PLAN.md) for the AI photo roadmap.
 - **Solo mode** skips the partner features. Solo players earn 💗 hearts by clearing everything due in a day (+2💗), plus gifts and the wheel.
 - **Teamwork pays the most.** In 2-player mode, helping earns 💗 hearts, the rarest currency, which buys love-only looks (🦄 Unicorn, Axolotl, Boo), rooms and accessories.
 
@@ -45,5 +46,6 @@ Data is saved in the browser on that device. Use **Settings → Back up data / R
 | `src/state.js` | Save/load, migration, selectors (due dates, moods, etc.) |
 | `src/game.js` | Rules: rewards, streaks, quests, gifts, wheel, house level, shop |
 | `src/pet.js` | Draws pets as SVG from parts and expressions |
+| `src/photo.js` | Turns a pet photo into a portrait and coat colors, on the device |
 | `src/fx.js` | Synth sound effects, particles, fly-to animations, splash banners |
 | `src/main.js` | Views, interactions and animation choreography |

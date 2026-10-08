@@ -89,6 +89,7 @@ export const QUESTS = [
   { id: 'tidy',    e: '🧽', name: 'Do 2 cleaning/laundry jobs', goal: 2,  on: 'stat:clean' },
   { id: 'cuddle',  e: '💞', name: 'Give the pets 10 cuddles',   goal: 10, on: 'pet' },
   { id: 'spin',    e: '🎡', name: 'Spin the lucky wheel',       goal: 1,  on: 'spin' },
+  { id: 'care',    e: '🐾', name: 'Do 3 pet-care tasks',        goal: 3,  on: 'care', pets: true },
 ];
 export const TEAM_QUESTS = [
   { id: 'help', e: '🤝', name: 'Help your partner out', goal: 1, on: 'help' },
@@ -135,6 +136,7 @@ export const ACH = [
   { id: 'album10',  e: '📒', name: 'Collector',     desc: 'Find 10 different stickers',    t: (p, S) => Object.keys(S.album).length >= 10, coins: 50 },
   { id: 'albumAll', e: '🌠', name: 'Completionist', desc: 'Complete the sticker album',    t: (p, S) => Object.keys(S.album).length >= STICKERS.length, coins: 300 },
   { id: 'house5',   e: '🏡', name: 'Homemakers',    desc: 'Reach house level 5',           t: (p, S) => S.house.level >= 5, coins: 60 },
+  { pets: true, id: 'petparent', e: '🐾', name: 'Pet Parent', desc: 'Do 25 real pet-care tasks', t: p => (p.n.care || 0) >= 25, coins: 50 },
   { id: 'harmony',  e: '☯️', name: 'Harmony',       desc: 'Every pet above 85% at once',   t: (p, S, h) => S.players.every(q => h(q) >= 85), coins: 40 },
 ];
 
@@ -147,4 +149,47 @@ export const LINES = {
   help: ['{p} could use a hand 💌', 'Psst… {p} needs help! 🆘', 'Team up with {p}? 🤝'],
   night: ['zzz… 💤', '*snore* 🌙', 'mmm… five more minutes…'],
   pet: ['Hehe! 💕', 'More scritches! 🥰', 'Purrrfect 😽', '*happy wiggle* ✨', 'I love you! 💖'],
+};
+
+// ----- Real-life pets (optional): up to 4 cats/dogs drawn as virtual twins -----
+// Coats override a species' colors. spots/stripes add markings; dark coats get colored irises
+// and light whiskers so faces stay readable.
+const INKY = '#3b3442';
+export const COATS = {
+  cat: [
+    { id: 'orange',   name: 'Orange tabby', body: '#f6a04d', belly: '#ffe4c4', accent: '#ff9fb2', stripes: '#d4782a' },
+    { id: 'black',    name: 'Black',        body: INKY,      belly: '#6f6679', accent: '#ff9fb2', dark: true, iris: '#d4e157' },
+    { id: 'white',    name: 'White',        body: '#fbf7f2', belly: '#ffffff', accent: '#ffb3c7', iris: '#7cc4ff' },
+    { id: 'gray',     name: 'Gray',         body: '#9aa4b1', belly: '#dde2e8', accent: '#ffb3c7', iris: '#e9c46a' },
+    { id: 'tuxedo',   name: 'Tuxedo',       body: INKY,      belly: '#ffffff', accent: '#ff9fb2', dark: true, iris: '#d4e157' },
+    { id: 'calico',   name: 'Calico',       body: '#fbf3ea', belly: '#ffffff', accent: '#ffb3c7', spots: ['#f39a45', INKY, '#f39a45'] },
+    { id: 'siamese',  name: 'Siamese',      body: '#f1e4cf', belly: '#fbf3e6', accent: '#5b4636', iris: '#6ec6ff' },
+    { id: 'brown',    name: 'Brown tabby',  body: '#a67c58', belly: '#e8d3bd', accent: '#ffb3c7', stripes: '#6e4e33' },
+  ],
+  dog: [
+    { id: 'golden',    name: 'Golden',          body: '#e9b866', belly: '#fbe5ba', accent: '#c98b3a' },
+    { id: 'black',     name: 'Black',           body: INKY,      belly: '#6f6679', accent: '#2a2430', dark: true, iris: '#b07a45' },
+    { id: 'chocolate', name: 'Chocolate',       body: '#8b5a3c', belly: '#c99a76', accent: '#5e3a24' },
+    { id: 'cream',     name: 'White / cream',   body: '#f8f1e4', belly: '#ffffff', accent: '#e3cfae' },
+    { id: 'blackwhite',name: 'Black & white',   body: '#fbf8f3', belly: '#ffffff', accent: INKY, spots: [INKY, INKY] },
+    { id: 'tan',       name: 'Tan & black',     body: '#c88a4a', belly: '#f0d2a5', accent: INKY, spots: [INKY] },
+    { id: 'gray',      name: 'Gray',            body: '#9aa4b1', belly: '#e1e5ea', accent: '#6d7682' },
+    { id: 'tricolor',  name: 'Tricolor',        body: '#fbf6ee', belly: '#ffffff', accent: '#8b5a3c', spots: ['#c88a4a', INKY] },
+  ],
+};
+export const MAX_REAL_PETS = 4;
+
+// Real care actions. goal = times per day that pay full rewards.
+export const CARE = {
+  feed:   { e: '🍖', label: 'Feed',   past: 'fed',               stat: 'food',  amt: 60, goal: 2, kinds: ['cat', 'dog'] },
+  walk:   { e: '🦮', label: 'Walk',   past: 'walked',            stat: 'joy',   amt: 60, goal: 2, kinds: ['dog'] },
+  play:   { e: '🧶', label: 'Play',   past: 'played with',       stat: 'joy',   amt: 60, goal: 1, kinds: ['cat'] },
+  water:  { e: '💧', label: 'Water',  past: 'refilled water for', stat: 'fresh', amt: 50, goal: 1, kinds: ['cat', 'dog'] },
+  litter: { e: '🧹', label: 'Litter', past: 'scooped litter for', stat: 'fresh', amt: 50, goal: 1, kinds: ['cat'] },
+};
+// Hourly decay: food empties over ~14h (two meals a day), exercise faster for dogs.
+export const RP_STATS = {
+  food:  { icon: '🍖', label: 'Fed',      decay: { cat: 7, dog: 7 } },
+  joy:   { icon: '🎾', label: 'Exercise', decay: { cat: 3.5, dog: 6 } },
+  fresh: { icon: '💧', label: 'Fresh',    decay: { cat: 4, dog: 4 } },
 };

@@ -408,6 +408,49 @@ input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 
   .duo.solo .p-right h3:first-child { margin-top: 4px; }
 }
 
+/* ===== Real-life pets ===== */
+.rpets { background: linear-gradient(135deg, #fff8ee 0%, #f0fbf4 100%); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 18px; }
+.rpets .q-head h2 { margin: 0; }
+.rp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.rp-card { background: #fff; border-radius: 22px; padding: 12px; border: 3px solid color-mix(in srgb, var(--rc) 40%, white); display: flex; flex-direction: column; gap: 8px; }
+.rp-scene { position: relative; height: 150px; border-radius: 16px; overflow: hidden;
+  background: radial-gradient(rgba(255, 255, 255, .6) 2px, transparent 2.6px) 0 0 / 20px 20px, linear-gradient(#e9f7ff 0 64%, #f3dcc0 64%); }
+.rp-scene .pet-btn { width: 150px; bottom: 2%; }
+.rp-scene .speech { top: 6%; font-size: .85rem; max-width: 80%; }
+.polaroid { position: absolute; z-index: 2; width: 64px; height: 64px; object-fit: cover; background: #fff; padding: 4px 4px 12px; border-radius: 4px; box-shadow: 0 3px 8px rgba(0, 0, 0, .18); transform: rotate(-6deg); }
+.rp-scene .polaroid { top: 10px; left: 10px; }
+.rp-name { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.rp-name b { font: 600 1.15rem var(--display); } .rp-name small { color: var(--muted); font-weight: 700; }
+.rp-meters { display: grid; gap: 5px; }
+.rp-m { display: flex; align-items: center; gap: 6px; } .rp-m .bar { flex: 1; height: 9px; }
+.rp-care { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; }
+.care { display: flex; flex-direction: column; align-items: center; min-height: 64px; padding: 6px 2px; border-radius: 14px; background: #f6f0fa; box-shadow: 0 3px 0 rgba(59, 36, 64, .12); transition: transform .15s var(--pop); }
+.care span { font-size: 1.4rem; line-height: 1.1; } .care b { font: 600 .8rem var(--display); } .care small { font: 600 .7rem var(--display); color: var(--muted); }
+.care:active { transform: translateY(2px) scale(.96); box-shadow: none; }
+.care.done { background: #dcfce7; } .care.done small { color: #15803d; }
+/* Pet editor (setup + settings) */
+.setup-pets { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-top: 18px; }
+.mode-pick.small .mode { flex: 1 1 160px; padding: 10px; } .mode-pick.small .mode span { font-size: 1.8rem; }
+.rp-editors { display: grid; gap: 12px; margin: 12px 0; }
+.rp-edit { display: flex; gap: 14px; align-items: flex-start; padding: 12px; border-radius: 20px; border: 3px solid color-mix(in srgb, var(--rc) 40%, white); background: #fff; flex-wrap: wrap; }
+.rp-preview { position: relative; flex: 0 0 150px; display: flex; flex-direction: column; align-items: center; }
+.rp-preview svg { width: 150px; } .rp-preview small { font-weight: 700; color: var(--muted); }
+.rp-preview .polaroid { top: -4px; left: -6px; width: 56px; height: 56px; }
+.rp-fields { flex: 1 1 240px; display: flex; flex-direction: column; gap: 8px; }
+.rp-fields label { display: flex; flex-direction: column; gap: 4px; font-weight: 800; font-size: .9rem; }
+.rp-fields input:not([type]) { min-height: 46px; border-radius: 14px; border: 3px solid var(--line); padding: 6px 12px; font-weight: 700; }
+.seg { display: inline-flex; background: #f3edf8; border-radius: 14px; padding: 4px; gap: 4px; align-self: flex-start; }
+.seg-b { min-height: 40px; padding: 4px 14px; border-radius: 11px; font: 600 .95rem var(--display); }
+.seg-b.on { background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
+.coats { display: flex; gap: 8px; flex-wrap: wrap; }
+.coat { width: 40px; height: 40px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--line); }
+.coat.on { box-shadow: 0 0 0 3px var(--ink); transform: scale(1.1); }
+.rp-actions { margin: 4px 0 0; } .rp-actions label.btn { cursor: pointer; flex-direction: row; font-size: 1rem; }
+/* Who-did-it modal */
+.who-pet { width: 120px; margin: -10px auto 0; }
+.who-btns { display: grid; gap: 10px; margin: 14px 0; }
+.who-btns .btn { width: 100%; }
+
 /* ===== Phones ===== */
 @media (max-width: 760px) {
   .duo { grid-template-columns: 1fr; }

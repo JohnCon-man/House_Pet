@@ -31,7 +31,7 @@ function parts(s) {
   }
 }
 
-function eye(x, y, exp, side) {
+function eye(x, y, exp, side, iris) {
   switch (exp) {
     case 'joy': case 'eat': return `<path d="M${x - 10} ${y + 4} Q${x} ${y - 10} ${x + 10} ${y + 4}" ${L}/>`;
     case 'sleep': return `<path d="M${x - 10} ${y - 2} Q${x} ${y + 8} ${x + 10} ${y - 2}" ${L}/>`;
@@ -43,7 +43,7 @@ function eye(x, y, exp, side) {
     case 'sick': return `<ellipse cx="${x}" cy="${y + 2}" rx="9" ry="4" fill="#2b1d2a"/>`;
     default: {
       const big = exp === 'happy', rx = big ? 10 : 9, ry = big ? 12.5 : 11;
-      let s = `<g class="blink"><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#2b1d2a"/><circle cx="${x + 3.5}" cy="${y - 4.5}" r="3.6" fill="#fff"/><circle cx="${x - 3}" cy="${y + 4}" r="1.6" fill="#fff"/></g>`;
+      let s = `<g class="blink">${iris ? `<ellipse cx="${x}" cy="${y}" rx="${rx + 3.5}" ry="${ry + 3}" fill="${iris}" stroke="#2b1d2a" stroke-width="1.5"/>` : ''}<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#2b1d2a"/><circle cx="${x + 3.5}" cy="${y - 4.5}" r="3.6" fill="#fff"/><circle cx="${x - 3}" cy="${y + 4}" r="1.6" fill="#fff"/></g>`;
       if (exp === 'sad') s += side < 0 ? `<path d="M${x - 11} ${y - 15} L${x + 7} ${y - 22}" ${L} stroke-width="4"/>` : `<path d="M${x - 7} ${y - 22} L${x + 11} ${y - 15}" ${L} stroke-width="4"/>`;
       return s;
     }
@@ -64,8 +64,13 @@ function mouth(s, exp, my) {
   }
 }
 
-export function petSVG(p, exp = 'ok', { stage = 'kid' } = {}) {
-  const s = SPECIES.find(x => x.id === p.pet.species) || SPECIES[0];
+// Fixed spot positions inside the body, used by patched coats (calico, black & white…).
+const SPOTS = [[70, 102, 17, 13], [134, 96, 14, 11], [126, 150, 12, 9]];
+
+// coat: optional color/marking override for real-life pets (see COATS in data.js).
+export function petSVG(p, exp = 'ok', { stage = 'kid', coat = null } = {}) {
+  const base = SPECIES.find(x => x.id === p.pet.species) || SPECIES[0];
+  const s = coat ? { ...base, ...coat } : base;
   const acc = ACCS.find(a => a.id === p.pet.acc);
   const frog = s.ears === 'frog', ghost = s.ears === 'ghost', peng = s.ears === 'penguin';
   const ey = frog ? 76 : 110, ex = frog ? 70 : 77, my = frog ? 124 : 134;
@@ -74,10 +79,13 @@ export function petSVG(p, exp = 'ok', { stage = 'kid' } = {}) {
     ? `<path d="M36 120 C36 70 64 50 100 50 C136 50 164 70 164 120 L164 174 Q153 162 142 174 Q131 186 120 174 Q109 162 98 174 Q87 186 76 174 Q65 162 54 174 Q45 184 36 174 Z" fill="${s.body}" ${O}/>`
     : peng ? `<ellipse cx="100" cy="120" rx="60" ry="66" fill="${s.body}" ${O}/><ellipse cx="100" cy="134" rx="44" ry="48" fill="${s.belly}"/>`
     : `<ellipse cx="100" cy="124" rx="68" ry="60" fill="${s.body}" ${O}/><ellipse cx="100" cy="148" rx="42" ry="28" fill="${s.belly}"/>`;
+  const markings = (s.spots || []).map((c, i) => `<ellipse cx="${SPOTS[i][0]}" cy="${SPOTS[i][1]}" rx="${SPOTS[i][2]}" ry="${SPOTS[i][3]}" fill="${c}"/>`).join('')
+    + (s.stripes ? `<path d="M88 72 l5 13 M100 67 v15 M112 72 l-5 13" stroke="${s.stripes}" stroke-width="5" stroke-linecap="round" fill="none"/>` : '');
+  const muzzle = s.dark ? `<ellipse cx="100" cy="${my - 3}" rx="21" ry="14" fill="${s.belly}"/>` : '';
   const feet = ghost ? '' : pair(`<ellipse cx="72" cy="182" rx="17" ry="9" fill="${peng ? s.accent : s.body}" ${O}/>`);
   const nose = ['cat', 'fox', 'dog', 'round', 'panda'].includes(s.ears) || s.id === 'bunny'
     ? `<path d="M94 ${my - 11} Q100 ${my - 5} 106 ${my - 11} Q100 ${my - 15} 94 ${my - 11} Z" fill="${s.id === 'bunny' ? '#ff8fb0' : INK}"/>` : '';
-  const whiskers = s.ears === 'cat' ? pair(`<path d="M56 ${my - 6} L32 ${my - 10} M56 ${my} L32 ${my + 4}" stroke="${INK}" stroke-width="2.5" opacity=".55" stroke-linecap="round"/>`) : '';
+  const whiskers = s.ears === 'cat' ? pair(`<path d="M56 ${my - 6} L32 ${my - 10} M56 ${my} L32 ${my + 4}" stroke="${s.dark ? '#fff' : INK}" stroke-width="2.5" opacity="${s.dark ? '.8' : '.55'}" stroke-linecap="round"/>`) : '';
   const cheeks = pair(`<ellipse cx="${frog ? 56 : 60}" cy="${ey + (frog ? 40 : 19)}" rx="10" ry="6" fill="${exp === 'sick' ? '#9be37f' : '#ff7aa2'}" opacity=".5"/>`);
   const extras = (exp === 'sad' ? `<path d="M${ex - 6} ${ey + 14} q-6 10 0 14 q6 -4 0 -14 Z" fill="#7fd3ff" stroke="#3aa0d8" stroke-width="1.5" class="tear"/>` : '')
     + (exp === 'sick' ? `<path d="M156 70 q-8 12 0 16 q8 -4 0 -16 Z" fill="#7fd3ff" stroke="#3aa0d8" stroke-width="2"/>` : '')
@@ -88,10 +96,10 @@ export function petSVG(p, exp = 'ok', { stage = 'kid' } = {}) {
     : acc.id === 'ring' ? `<text x="150" y="190" font-size="34" text-anchor="middle">${acc.e}</text>`
     : acc.face ? `<text x="100" y="${ey + 17}" font-size="58" text-anchor="middle">${acc.e}</text>`
     : `<text x="100" y="${topY}" font-size="50" text-anchor="middle">${acc.e}</text>`;
-  const face = eye(ex, ey, exp, -1) + eye(200 - ex, ey, exp, 1);
+  const face = eye(ex, ey, exp, -1, s.iris) + eye(200 - ex, ey, exp, 1, s.iris);
   return `<svg class="pet-svg exp-${exp} st-${stage}" viewBox="-10 -30 220 230" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <ellipse class="shadow" cx="100" cy="190" rx="${ghost ? 44 : 60}" ry="9" fill="#000" opacity=".13"/>
-    <g class="rig">${back}${body}${feet}${front}${tuft}${cheeks}${whiskers}${nose}${face}${mouth(s, exp, my)}${extras}${accSvg}</g>
+    <g class="rig">${back}${body}${markings}${feet}${front}${tuft}${cheeks}${muzzle}${whiskers}${nose}${face}${mouth(s, exp, my)}${extras}${accSvg}</g>
   </svg>`;
 }
 

@@ -1,6 +1,7 @@
 // UI: views, interactions and the animation choreography around game actions.
 import * as D from './data.js';
-import { store, save, esc, P, partner, solo, newPlayer, spec, xpNeed, needsHelp, helpAsks, streakNow, hasSpecies, capLabel, stage, timeOfDay, isNight, mood, choresOf, inboxOf, dueCount, ownerName, defaultState, migrate, dayKey, addDays } from './state.js';
+import { store, save, esc, P, partner, solo, newPlayer, spec, xpNeed, needsHelp, helpAsks, streakNow, hasSpecies, capLabel, stage, timeOfDay, isNight, mood, choresOf, inboxOf, dueCount, ownerName, defaultState, migrate, dayKey, addDays, newRealPet, rpById, coatOf, rpModel, rpDone, rpMood } from './state.js';
+import { photoToPet } from './photo.js';
 import * as G from './game.js';
 import { petSVG, eggSVG } from './pet.js';
 import { sfx, confetti, burst, popText, fly, countUp, splash, center, wait } from './fx.js';
@@ -10,7 +11,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const S = () => store.S;
 const ui = {
   view: !S().setup ? 'setup' : S().players.every(p => p.pet.hatched) ? 'home' : 'hatch',
-  shopFor: 'a', focus: 'a', setupMode: 'solo', addingPlayer: false, undo: null, react: {}, hatch: {}, gift: null, spinFor: null, modal: false,
+  shopFor: 'a', focus: 'a', setupMode: 'solo', addingPlayer: false, hasPets: null, carePending: null, undo: null, react: {}, hatch: {}, gift: null, spinFor: null, modal: false,
 };
 const STAGE_SCALE = { baby: 0.74, kid: 0.88, adult: 1 };
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -21,7 +22,12 @@ function petExp(p) {
   if (r && r.until > Date.now()) return r.exp;
   return isNight() ? 'sleep' : mood(p).exp;
 }
-function updatePet(pid) { const el = $(`#pet-${pid}`), p = P(pid); if (el && p) el.innerHTML = petSVG(p, petExp(p), { stage: stage(p.level) }); }
+function updatePet(pid) {
+  const el = $(`#pet-${pid}`); if (!el) return;
+  const p = P(pid), rp = !p && rpById(pid);
+  if (p) el.innerHTML = petSVG(p, petExp(p), { stage: stage(p.level) });
+  else if (rp) el.innerHTML = rpSVG(rp);
+}
 function react(pid, exp, ms = 1400) {
   ui.react[pid] = { exp, until: Date.now() + ms };
   updatePet(pid);
@@ -160,10 +166,93 @@ function floatStrip() {
     }).join('')}</div></section>`;
 }
 
+/* ---------- Real-life pets ---------- */
+const rps = () => S().realPets || [];
+const MAX_RP = D.MAX_REAL_PETS;
+function rpExp(rp) {
+  const r = ui.react[rp.id];
+  if (r && r.until > Date.now()) return r.exp;
+  return isNight() ? 'sleep' : rpMood(rp).exp;
+}
+const rpSVG = (rp, exp) => petSVG(rpModel(rp), exp || rpExp(rp), { coat: coatOf(rp) });
+const meterColor = v => v >= 60 ? '#22c55e' : v >= 30 ? '#f59e0b' : '#ef4444';
+const joyIcon = rp => rp.kind === 'dog' ? '🦮' : '🧶';
+const RP_SAY = {
+  feed: ['Nom nom nom! 🍖', 'Best. Meal. Ever. 😋', 'My tummy says thank you!'],
+  walk: ['Walkies!! 🦮', 'I sniffed SO many things!', 'Again tomorrow? 🐾'],
+  play: ['Got the string! 🧶', 'Again, again!', '*pounce* ✨'],
+  water: ['Ahh, fresh water 💧', 'So refreshing!'],
+  litter: ['Much better, thank you 🧹', 'A clean box! 👑'],
+};
+function rpLine(rp) {
+  if (isNight()) return pick(D.LINES.night);
+  if (rp.food < 40) return pick(['Is it dinner time? 🍖', '*stares at food bowl*', 'I could eat… 🍖']);
+  if (rp.joy < 40) return rp.kind === 'dog' ? pick(['Walk? Walk?? WALK?! 🦮', '*brings you the leash*']) : pick(['Play with me! 🧶', '*knocks something off the table*']);
+  if (rp.fresh < 40) return rp.kind === 'cat' ? pick(['Psst… the litter box 🧹', 'My water is not fresh 💧']) : 'My water bowl is low 💧';
+  return pick(rp.kind === 'cat' ? ['Purrrfect day ☀️', '*slow blink* 💕', 'I love my humans 💖'] : ['Best family ever! 💖', '*happy tail wags*', 'You’re my favorite! 🐾']);
+}
+
+function rpCard(rp) {
+  const m = rpMood(rp), sleeping = isNight() && !ui.react[rp.id];
+  const cares = Object.entries(D.CARE).filter(([, c]) => c.kinds.includes(rp.kind));
+  return `<div class="rp-card" style="--rc:${coatOf(rp).body}">
+    <div class="rp-scene">
+      ${rp.photo ? `<img class="polaroid" src="${rp.photo}" alt="Photo of ${esc(rp.name)}">` : ''}
+      <button class="pet-btn rp" id="pet-${rp.id}" data-act="rpPet" data-id="${rp.id}" aria-label="Cuddle ${esc(rp.name)}">${rpSVG(rp)}</button>
+      <div class="speech" id="speech-${rp.id}"></div>
+    </div>
+    <div class="rp-name"><b>${esc(rp.name)}</b><small>${sleeping ? '💤 Sleeping' : `${m.e} ${m.label}`}</small></div>
+    <div class="rp-meters">${Object.entries(D.RP_STATS).map(([k, st]) => {
+      const v = Math.round(rp[k]);
+      return `<div class="rp-m" title="${st.label} ${v}%"><span>${k === 'joy' ? joyIcon(rp) : st.icon}</span><div class="bar"><i style="width:${v}%;background:${meterColor(v)}"></i></div></div>`;
+    }).join('')}</div>
+    <div class="rp-care">${cares.map(([k, c]) => {
+      const n = rpDone(rp, k);
+      return `<button class="care${n >= c.goal ? ' done' : ''}" data-act="care" data-id="${rp.id}" data-c="${k}"><span>${c.e}</span><b>${c.label}</b><small>${n >= c.goal ? '✓ ' : ''}${n}/${c.goal}</small></button>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+function realPetsStrip() {
+  if (!rps().length) return '';
+  return `<section class="rpets"><div class="q-head"><h2>🐾 ${rps().length > 1 ? 'Our pets' : 'Our pet'}</h2><span class="tiny">Real-life feeding, walks and care keep them happy · +5🪙 a task</span></div>
+    <div class="rp-list">${rps().map(rpCard).join('')}</div></section>`;
+}
+
+const swatchBg = c => c.spots ? `conic-gradient(${c.body} 0 50%, ${c.spots[0]} 0 75%, ${c.spots[1] || c.belly} 0)`
+  : `linear-gradient(135deg, ${c.body} 0 58%, ${c.stripes || c.belly} 58%)`;
+
+function rpEditor(rp) {
+  const coat = coatOf(rp);
+  return `<div class="rp-edit" style="--rc:${coat.body}">
+    <div class="rp-preview">${rp.photo ? `<img class="polaroid" src="${rp.photo}" alt="">` : ''}${rpSVG(rp, 'happy')}<small>${rp.custom ? '📷 Colors from photo' : esc(coat.name)}</small></div>
+    <div class="rp-fields">
+      <label>Pet’s name <input value="${esc(rp.name)}" data-chg="rpet.name" data-id="${rp.id}" maxlength="20"></label>
+      <div class="seg">${['cat', 'dog'].map(k => `<button type="button" class="seg-b${rp.kind === k ? ' on' : ''}" data-act="rpKind" data-id="${rp.id}" data-k="${k}">${k === 'cat' ? '🐱 Cat' : '🐶 Dog'}</button>`).join('')}</div>
+      <span class="label">Coat</span>
+      <div class="coats">${D.COATS[rp.kind].map(c => `<button type="button" class="coat${!rp.custom && rp.coat === c.id ? ' on' : ''}" data-act="rpCoat" data-id="${rp.id}" data-c="${c.id}" title="${c.name}" aria-label="${c.name}" style="background:${swatchBg(c)}"></button>`).join('')}</div>
+      <div class="row rp-actions">
+        <label class="btn">📷 ${rp.photo ? 'New photo' : 'Add a photo'}<input type="file" accept="image/*" data-chg="rpPhoto" data-id="${rp.id}" hidden></label>
+        ${rp.photo ? `<button type="button" class="btn" data-act="rpPhotoOff" data-id="${rp.id}">Remove photo</button>` : ''}
+        <button type="button" class="icon-btn" data-act="rpRemove" data-id="${rp.id}" aria-label="Remove ${esc(rp.name)}">🗑️</button>
+      </div>
+    </div></div>`;
+}
+
+function petsEditor() {
+  return `<div class="rp-editors">${rps().map(rpEditor).join('')}</div>
+    ${rps().length < MAX_RP ? `<div class="row"><button type="button" class="btn" data-act="rpAdd" data-k="dog">🐶 Add a dog</button><button type="button" class="btn" data-act="rpAdd" data-k="cat">🐱 Add a cat</button><span class="tiny">${rps().length}/${MAX_RP} pets</span></div>`
+      : `<p class="tiny">That’s the max of ${MAX_RP} pets for now.</p>`}
+    <p class="tiny">📷 A photo stays on this device. We crop it into a portrait and match your pet’s colors from it.</p>`;
+}
+
+// Setup and Settings both host the pet editor; keep typed setup fields when it re-renders.
+function rerender() { if (ui.view === 'setup') captureSetup($('form[data-form=setup]')); render(); }
+
 /* ---------- Views ---------- */
 function homeView() {
-  if (solo()) return `${questStrip()}${floatStrip()}<div class="duo solo">${playerCol(S().players[0])}</div>`;
-  return `${questStrip()}${floatStrip()}<div class="focus-bar">${chips('focus', ui.focus)}</div>
+  if (solo()) return `${questStrip()}${floatStrip()}${realPetsStrip()}<div class="duo solo">${playerCol(S().players[0])}</div>`;
+  return `${questStrip()}${floatStrip()}${realPetsStrip()}<div class="focus-bar">${chips('focus', ui.focus)}</div>
     <div class="duo" data-focus="${ui.focus}">${S().players.map(playerCol).join('')}</div>`;
 }
 
@@ -234,7 +323,7 @@ function albumView() {
   const col = p => `<section class="card" style="--c:${p.color}"><h2>${miniPet(p, 'happy')} ${esc(p.name)} <span class="lvl">Lv ${p.level}</span></h2>
     <div class="kpis"><div><b>${p.n.done}</b>chores</div><div><b>${p.n.helped}</b>helps</div><div><b>${p.n.early}</b>early</div><div><b>${streakNow(p)}</b>streak</div><div><b>${p.n.gifts}</b>gifts</div></div>
     <div class="cal" title="Last 14 days">${days.map(d => `<span class="${p.days.includes(d) ? 'on' : ''}${d === dayKey() ? ' today' : ''}">${new Date(d).toLocaleDateString([], { weekday: 'narrow' })}</span>`).join('')}</div>
-    <div class="ach">${D.ACH.filter(a => !(a.team && solo())).map(a => `<div class="a${p.ach.includes(a.id) ? '' : ' locked'}"><span>${a.e}</span><b>${a.name}</b><small>${a.desc}</small></div>`).join('')}</div></section>`;
+    <div class="ach">${D.ACH.filter(a => !(a.team && solo()) && !(a.pets && !rps().length)).map(a => `<div class="a${p.ach.includes(a.id) ? '' : ' locked'}"><span>${a.e}</span><b>${a.name}</b><small>${a.desc}</small></div>`).join('')}</div></section>`;
   return `<section class="card album"><h2>📒 Sticker Album <span class="badge ok">${owned}/${D.STICKERS.length}</span></h2>
       <p class="muted">${solo() ? '' : 'Shared by both of you. '}Stickers come from 🎁 gifts — found while doing chores, levelling up, and finishing daily quests.</p>
       <div class="stickers">${D.STICKERS.map(s => S().album[s.id]
@@ -255,6 +344,9 @@ function settingsView() {
       <label>Name <input value="${esc(p.name)}" data-chg="player.name" data-p="${p.id}" maxlength="20"></label>
       <label>Pet name <input value="${esc(p.pet.name)}" data-chg="player.pet.name" data-p="${p.id}" maxlength="20"></label>
       <div class="swatches">${D.COLORS.map(c => `<button class="sw${p.color === c ? ' on' : ''}" style="background:${c}" data-act="color" data-p="${p.id}" data-c="${c}" aria-label="Color ${c}"></button>`).join('')}</div></div>`).join('')}</div></section>
+    <section class="card"><h2>🐾 Our real pets</h2>
+      <p class="muted">Optional. Add your real cats and dogs. Each gets a virtual twin on Home, and real feeding, walks and litter keep it happy.</p>
+      ${petsEditor()}</section>
     <section class="card"><h2>🧹 Assigned chores</h2>
       <form data-form="chore" class="row">
         <input name="task" placeholder="New chore" maxlength="60" required autocomplete="off">
@@ -294,7 +386,7 @@ function captureSetup(f) {
 
 function setupView() {
   const base = D.SPECIES.filter(s => !s.lvl && !s.hearts), one = ui.setupMode === 'solo' && !ui.addingPlayer;
-  const players = one ? S().players.slice(0, 1) : S().players;
+  const players = one ? S().players.slice(0, 1) : S().players, hasPets = ui.hasPets ?? rps().length > 0;
   return `<section class="setup"><div class="setup-hero"><div class="logo-big">🏡</div><h1>House<span>Pet</span></h1>
       <p>${ui.addingPlayer ? 'Welcome your new housemate! Set up their pet below.' : one ? 'Raise a pet by keeping your home happy. Doing chores feeds, bathes and plays with it. Clear your day to earn 💗 hearts and the rarest unlocks.'
         : 'Each of you raises a pet. Doing chores feeds, bathes and plays with it. Help each other out to earn 💗 hearts and the rarest unlocks.'}</p></div>
@@ -309,7 +401,13 @@ function setupView() {
       <span class="label">Pick a color</span>
       <div class="swatches">${D.COLORS.map(c => `<label class="sw-l"><input type="radio" name="c${i}" value="${c}"${p.color === c ? ' checked' : ''}><span class="sw" style="background:${c}"></span></label>`).join('')}</div>
     </div>`).join('')}</div>
-    ${ui.addingPlayer ? '' : '<p class="muted center">We added some starter chores — tweak them anytime in ⚙️ Settings.</p>'}
+    ${ui.addingPlayer ? '' : `<section class="setup-pets"><h2>🐾 Any pets at home?</h2>
+      <p class="muted">Optional. Add your real cats and dogs (up to ${MAX_RP}). Each gets a virtual twin, and real feeding, walks and litter keep it happy.</p>
+      <div class="mode-pick small" role="radiogroup" aria-label="Pets at home?">
+        <button type="button" class="mode${hasPets ? '' : ' on'}" data-act="setupPets" data-v="0" role="radio" aria-checked="${!hasPets}"><span>🏠</span><b>No pets</b></button>
+        <button type="button" class="mode${hasPets ? ' on' : ''}" data-act="setupPets" data-v="1" role="radio" aria-checked="${hasPets}"><span>🐾</span><b>Yes, we have pets</b></button></div>
+      ${hasPets ? petsEditor() : ''}</section>
+      <p class="muted center">We added some starter chores — tweak them anytime in ⚙️ Settings.</p>`}
     <div class="center"><button class="btn primary big">${one ? 'Get my egg 🥚' : 'Get our eggs 🥚'}</button></div></form></section>`;
 }
 
@@ -325,6 +423,9 @@ function hatchView() {
 const TABS = [['home', '🏠', 'Home'], ['inbox', '📥', 'Inbox'], ['shop', '🛍️', 'Shop'], ['album', '📒', 'Album'], ['settings', '⚙️', 'Settings']];
 
 function render() {
+  // Finish any in-progress edit first: blurring fires its change handler (which may render) before we replace the DOM.
+  const active = document.activeElement;
+  if (active && active !== document.body && $('#app').contains(active)) active.blur();
   const intro = ui.view === 'setup' || ui.view === 'hatch';
   const h = S().house, harmony = Math.round(S().players.reduce((a, p) => a + (p.pet.food + p.pet.clean + p.pet.fun + p.pet.energy) / 4, 0) / S().players.length);
   const waiting = S().inbox.filter(i => !i.claimedBy).length;
@@ -493,6 +594,24 @@ async function spinGo(el) {
   $('#wheelResult').innerHTML = `<p class="prize">You won <b>${prize.e} ${prize.label}</b>!</p><button class="btn primary" data-act="closeModal">Sweet!</button>`;
 }
 
+async function doCare(id, key, by, btnEl) {
+  const from = btnEl ? center(btnEl) : { x: innerWidth / 2, y: innerHeight / 2 };
+  snap();
+  const before = viewSnap(), res = G.care(id, key, by);
+  if (!res) return;
+  G.checkAch(); save(); render();
+  sfx('pop'); burst(from.x, from.y, [res.c.e, '✨'], 8, 60);
+  const petEl = $(`#pet-${id}`);
+  fly(from, petEl, res.c.e, { size: 40, dur: 700 }).then(() => {
+    react(id, key === 'feed' ? 'eat' : 'joy', 1300); sfx(key === 'feed' ? 'chomp' : 'done');
+    if (petEl) { const c = center(petEl); popText(c.x, c.y - 40, `+${res.c.amt} ${res.c.e}`, '#22c55e'); burst(c.x, c.y, ['💖', '✨'], 6, 60); }
+    setTimeout(() => say(id, pick(RP_SAY[key])), 900);
+  });
+  toast(`${res.c.e} ${esc(res.doers.map(p => p.name).join(' & '))} ${res.c.past} <b>${esc(res.rp.name)}</b> +${res.coins}🪙 +${res.xp}⭐${res.full ? '' : '<small>Already done today, still counts!</small>'}`, true);
+  await animateWallets(before, from);
+  playEvents();
+}
+
 const ACTIONS = {
   tab: el => { ui.view = el.dataset.v; sfx('tap'); render(); scrollTo(0, 0); },
   focus: el => { ui.focus = el.dataset.p; sfx('tap'); render(); },
@@ -576,6 +695,51 @@ const ACTIONS = {
     const slot = $(`#slot-${pid}`); if (slot) { const c = center(slot); burst(c.x, c.y, ['✨', '🥚', '💖', '⭐'], 16, 140); }
     confetti(['🐣', '✨', '💖'], 20);
   },
+  setupPets: el => {
+    captureSetup($('form[data-form=setup]'));
+    ui.hasPets = el.dataset.v === '1';
+    if (ui.hasPets && !rps().length) S().realPets = [newRealPet('dog')];
+    sfx('tap'); render();
+  },
+  rpAdd: el => { if (rps().length >= MAX_RP) return; S().realPets = [...rps(), newRealPet(el.dataset.k)]; sfx('pop'); save(); rerender(); },
+  rpKind: el => {
+    const rp = rpById(el.dataset.id); if (rp.kind === el.dataset.k) return;
+    const wasDefault = ['Buddy', 'Whiskers'].includes(rp.name);
+    rp.kind = el.dataset.k; rp.coat = D.COATS[rp.kind][0].id; rp.custom = null; rp.photo = null;
+    if (wasDefault) rp.name = rp.kind === 'cat' ? 'Whiskers' : 'Buddy';
+    sfx('tap'); save(); rerender();
+  },
+  rpCoat: el => { const rp = rpById(el.dataset.id); rp.coat = el.dataset.c; rp.custom = null; sfx('tap'); save(); rerender(); },
+  rpPhotoOff: el => { const rp = rpById(el.dataset.id); rp.photo = null; rp.custom = null; save(); rerender(); },
+  rpRemove: el => {
+    const rp = rpById(el.dataset.id);
+    if (!confirm(`Remove ${rp.name}?`)) return;
+    S().realPets = rps().filter(x => x !== rp);
+    if (ui.view === 'setup' && !rps().length) ui.hasPets = false;
+    save(); rerender();
+  },
+  rpPet: el => {
+    const id = el.dataset.id, rp = rpById(id), c = center(el);
+    sfx('pop'); burst(c.x, c.y - 20, ['💖', '💕', '🐾'], 7, 80);
+    el.classList.remove('squish'); void el.offsetWidth; el.classList.add('squish');
+    react(id, isNight() ? 'joy' : pick(['joy', 'love']), 1200);
+    say(id, isNight() ? '*yawn* …hi 💤' : rp.kind === 'cat' ? pick(['Purrr… 💕', '*head bonk* 💖', '*slow blink*']) : pick(['*happy tail wags* 💖', 'Belly rubs?! 🐾', 'I love you! 💕']));
+  },
+  care: el => {
+    const { id, c } = el.dataset;
+    if (solo()) return doCare(id, c, 'a', el);
+    const rp = rpById(id), cd = D.CARE[c];
+    ui.carePending = { id, c };
+    modal(`<div class="who-stage"><div class="who-pet">${rpSVG(rp, 'happy')}</div><h2>${cd.e} Who ${cd.past} ${esc(rp.name)}?</h2>
+      <div class="who-btns">${S().players.map(p => `<button class="btn claim big" style="--c:${p.color}" data-act="careBy" data-p="${p.id}">${miniPet(p)} ${esc(p.name)}</button>`).join('')}
+      <button class="btn claim together big" data-act="careBy" data-p="both">👫 Both of us</button></div>
+      <button class="link" data-act="closeModal">Cancel</button></div>`);
+  },
+  careBy: el => {
+    const pending = ui.carePending; if (!pending) return;
+    ui.carePending = null; ui.modal = false; $('#modal').classList.remove('show');
+    doCare(pending.id, pending.c, el.dataset.p, $(`[data-act=care][data-id="${pending.id}"][data-c="${pending.c}"]`));
+  },
   setupMode: el => { captureSetup($('form[data-form=setup]')); ui.setupMode = el.dataset.m; sfx('tap'); render(); },
   addPlayer: () => {
     const used = S().players[0].color, color = D.COLORS.find(c => c !== used);
@@ -595,6 +759,7 @@ const FORMS = {
       S().inbox.forEach(it => { if (it.claimedBy) it.claimedBy = 'a'; });
       S().daily = null; G.ensureDaily(); // re-pick today's quests without the teamwork one
     }
+    if (!ui.addingPlayer && !(ui.hasPets ?? rps().length > 0)) S().realPets = [];
     ui.addingPlayer = false;
     S().setup = true; ui.view = 'hatch'; save(); render(); sfx('pop');
   },
@@ -618,6 +783,19 @@ function onChange(el) {
     const p = P(el.dataset.p), was = p.capacity; p.capacity = +el.value;
     if (p.capacity < 35 && was >= 35) { G.log(`${p.name}'s energy is low 🪫`); if (partner(p)) { setTimeout(() => say(partner(p).id, `${p.name} is running low… 💌`), 200); sfx('help'); } }
     save(); render(); return;
+  }
+  if (k === 'rpet.name') {
+    const rp = rpById(el.dataset.id), v = el.value.trim();
+    if (rp && v) rp.name = v;
+    save(); rerender(); return;
+  }
+  if (k === 'rpPhoto') {
+    const rp = rpById(el.dataset.id), file = el.files[0]; if (!rp || !file) return;
+    photoToPet(file, rp.kind).then(({ photo, colors }) => {
+      rp.photo = photo; rp.custom = colors; save(); rerender(); sfx('hatch');
+      toast(`📷 Matched ${esc(rp.name)}’s colors from your photo! Tap a coat to adjust.`);
+    }).catch(() => toast('⚠️ Couldn’t read that photo. Try another one?'));
+    return;
   }
   if (k === 'import') {
     const file = el.files[0]; if (!file) return;
@@ -653,8 +831,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 // Pets chatter on their own every so often.
 setInterval(() => {
   if (ui.view !== 'home' || ui.modal || document.hidden) return;
-  const p = pick(S().players);
-  if (!$(`#speech-${p.id}`)?.classList.contains('show')) say(p.id, lineFor(p));
+  const who = pick([...S().players.map(p => [p.id, () => lineFor(p)]), ...rps().map(rp => [rp.id, () => rpLine(rp)])]);
+  if (!$(`#speech-${who[0]}`)?.classList.contains('show')) say(who[0], who[1]());
 }, 14000);
 
 G.tick(); save(); render();
