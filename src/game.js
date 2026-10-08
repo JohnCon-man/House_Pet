@@ -1,5 +1,5 @@
 // Game rules. Mutates store.S and pushes UI events (level ups, quests, unlocks) to `events`.
-import { STATS, CATS, HOUR, SPECIES, QUESTS, TEAM_QUESTS, STICKERS, WHEEL, ACH, HOUSE, houseNeed, TREATS, ACCS, ROOMS } from './data.js';
+import { STATS, CATS, HOUR, CARE, RP_STATS, SPECIES, QUESTS, TEAM_QUESTS, STICKERS, WHEEL, ACH, HOUSE, houseNeed, TREATS, ACCS, ROOMS } from './data.js';
 import { store, uid, clamp, today, dayKey, addDays, P, partner, health, xpNeed, needsHelp, choreInfo, choresOf } from './state.js';
 
 const S = () => store.S;
@@ -17,6 +17,7 @@ export function tick() {
       const slow = p.capacity < 35 ? 0.5 : 1;
       for (const k in STATS) p.pet[k] = clamp(p.pet[k] - STATS[k].decay * h * slow);
     }
+    for (const rp of S().realPets || []) for (const k in RP_STATS) rp[k] = clamp(rp[k] - RP_STATS[k].decay[rp.kind] * h);
   }
   ensureDaily();
 }
@@ -71,7 +72,7 @@ export const questDef = id => [...QUESTS, ...TEAM_QUESTS].find(q => q.id === id)
 export function ensureDaily() {
   const k = dayKey();
   if (S().daily?.day === k) return;
-  const r = rng(k), pool = [...QUESTS];
+  const r = rng(k), pool = QUESTS.filter(q => !q.pets || (S().realPets || []).length);
   // Two players always get one teamwork quest; a solo player gets three regular ones.
   const picks = S().players.length > 1 ? [TEAM_QUESTS[Math.floor(r() * TEAM_QUESTS.length)].id] : [];
   while (picks.length < 3) picks.push(pool.splice(Math.floor(r() * pool.length), 1)[0].id);
@@ -183,6 +184,28 @@ export function doInbox(id) {
   emit('chore', { cat: it.cat, stat, who: doer.id }); emit('inbox');
   log(`${doer.name} finished inbox task “${it.title}”`);
   return { ...r, notes, gift, giftTo: gift ? doer : null, stat, doer, owner: doer, owners: [doer], title: it.title, icon: CATS[it.cat].icon };
+}
+
+/* ---------- Real-life pet care ---------- */
+// by: a player id or 'both'. Past each care's daily goal it still counts, but pays a token amount.
+export function care(id, key, by) {
+  const rp = (S().realPets || []).find(x => x.id === id), c = CARE[key];
+  if (!rp || !c) return null;
+  const k = dayKey();
+  if (rp.day !== k) { rp.day = k; rp.done = {}; }
+  rp.done[key] = (rp.done[key] || 0) + 1;
+  rp[c.stat] = clamp(rp[c.stat] + c.amt);
+  const full = rp.done[key] <= c.goal, doers = by === 'both' ? S().players : [P(by)];
+  const r = full ? { coins: 5, xp: 8 } : { coins: 1, xp: 2 };
+  for (const p of doers) {
+    p.n.care = (p.n.care || 0) + 1;
+    feed(p, 'fun', 5);
+    award(p, { ...r, coins: r.coins + bumpStreak(p) });
+  }
+  houseXP(full ? 5 : 1);
+  emit('care');
+  log(`${doers.map(p => p.name).join(' & ')} ${c.past} ${rp.name} ${c.e}`);
+  return { ...r, rp, c, doers, full, count: rp.done[key] };
 }
 
 /* ---------- Pets, gifts, wheel, shop ---------- */
