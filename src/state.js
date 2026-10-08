@@ -68,12 +68,13 @@ export const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store
 /* ---------- Selectors ---------- */
 const S = () => store.S;
 export const P = id => S().players.find(p => p.id === id);
-export const partner = p => S().players.find(q => q.id !== p.id);
+export const partner = p => S().players.find(q => q.id !== p.id); // undefined in 1-player mode
+export const solo = () => S().players.length === 1;
 export const spec = id => SPECIES.find(s => s.id === id) || SPECIES[0];
 export const health = p => Object.keys(STATS).reduce((a, k) => a + p.pet[k], 0) / 4;
 export const xpNeed = l => 60 + l * 40;
 export const helpAsks = p => S().chores.filter(c => c.owner === p.id && c.helpReq);
-export const needsHelp = p => p.needHelp || p.capacity < 35 || helpAsks(p).length > 0;
+export const needsHelp = p => !!p && (p.needHelp || p.capacity < 35 || helpAsks(p).length > 0);
 export const streakNow = p => [dayKey(), dayKey(addDays(Date.now(), -1))].includes(p.lastDay) ? p.streak : 0;
 export const hasSpecies = (p, s) => s.lvl ? p.level >= s.lvl : s.hearts ? p.owned.includes(s.id) : true;
 export const capLabel = v => v < 20 ? ['🪫', 'Running on empty'] : v < 40 ? ['😮‍💨', 'Low battery'] : v < 70 ? ['🙂', 'Doing okay'] : v < 90 ? ['💪', 'Feeling good'] : ['🚀', 'Full tank'];

@@ -82,7 +82,7 @@ export const houseNeed = l => 80 + l * 40;
 // Daily co-op quests: 3 are drawn per day, one is always a teamwork quest.
 export const QUESTS = [
   { id: 'c3',      e: '🧹', name: 'Finish 3 chores',            goal: 3,  on: 'chore' },
-  { id: 'c6',      e: '💪', name: 'Team up for 6 chores',       goal: 6,  on: 'chore' },
+  { id: 'c6',      e: '💪', name: 'Knock out 6 chores',       goal: 6,  on: 'chore' },
   { id: 'inbox',   e: '📥', name: 'Clear an inbox task',        goal: 1,  on: 'inbox' },
   { id: 'early',   e: '🐦', name: 'Get ahead on a chore',       goal: 1,  on: 'early' },
   { id: 'kitchen', e: '🍳', name: 'Do a kitchen chore',         goal: 1,  on: 'cat:kitchen' },
@@ -120,9 +120,9 @@ export const ACH = [
   { id: 'ten',      e: '🧹', name: 'Tidy Ten',      desc: 'Complete 10 chores',            t: p => p.n.done >= 10,   coins: 25 },
   { id: 'fifty',    e: '🏅', name: 'Home Hero',     desc: 'Complete 50 chores',            t: p => p.n.done >= 50,   coins: 75 },
   { id: 'hundred',  e: '💯', name: 'Centurion',     desc: 'Complete 100 chores',           t: p => p.n.done >= 100,  coins: 150 },
-  { id: 'help1',    e: '🤝', name: 'Helping Paw',   desc: 'Help your partner',             t: p => p.n.helped >= 1,  coins: 15 },
-  { id: 'together5', e: '👫', name: 'Better Together', desc: 'Finish 5 tasks together',   t: p => p.n.together >= 5, coins: 40 },
-  { id: 'help10',   e: '💞', name: 'Dream Team',    desc: 'Help your partner 10 times',    t: p => p.n.helped >= 10, coins: 60 },
+  { team: true, id: 'help1',    e: '🤝', name: 'Helping Paw',   desc: 'Help your partner',             t: p => p.n.helped >= 1,  coins: 15 },
+  { team: true, id: 'together5', e: '👫', name: 'Better Together', desc: 'Finish 5 tasks together',   t: p => p.n.together >= 5, coins: 40 },
+  { team: true, id: 'help10',   e: '💞', name: 'Dream Team',    desc: 'Help your partner 10 times',    t: p => p.n.helped >= 10, coins: 60 },
   { id: 'early5',   e: '🐦', name: 'Early Bird',    desc: 'Do 5 chores ahead of schedule', t: p => p.n.early >= 5,   coins: 30 },
   { id: 'inbox5',   e: '📥', name: 'Inbox Raider',  desc: 'Finish 5 inbox tasks',          t: p => p.n.inbox >= 5,   coins: 30 },
   { id: 'clear',    e: '✅', name: 'All Clear',     desc: 'Finish everything due today',   t: p => p.n.clear >= 1,   coins: 15 },
@@ -135,7 +135,7 @@ export const ACH = [
   { id: 'album10',  e: '📒', name: 'Collector',     desc: 'Find 10 different stickers',    t: (p, S) => Object.keys(S.album).length >= 10, coins: 50 },
   { id: 'albumAll', e: '🌠', name: 'Completionist', desc: 'Complete the sticker album',    t: (p, S) => Object.keys(S.album).length >= STICKERS.length, coins: 300 },
   { id: 'house5',   e: '🏡', name: 'Homemakers',    desc: 'Reach house level 5',           t: (p, S) => S.house.level >= 5, coins: 60 },
-  { id: 'harmony',  e: '☯️', name: 'Harmony',       desc: 'Both pets above 85% at once',   t: (p, S, h) => S.players.every(q => h(q) >= 85), coins: 40 },
+  { id: 'harmony',  e: '☯️', name: 'Harmony',       desc: 'Every pet above 85% at once',   t: (p, S, h) => S.players.every(q => h(q) >= 85), coins: 40 },
 ];
 
 export const LINES = {

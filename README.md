@@ -2,7 +2,9 @@
 
 **▶️ Play: https://johncon-man.github.io/House_Pet/**
 
-A two-player, co-op tamagotchi for household chores. Each of you hatches and raises a pet; doing chores feeds, bathes, plays with and rests it. Built for a shared iPad, and plays on phones too.
+A tamagotchi for household chores. Play **solo (1 player)** or **co-op (2 players)**: pick at setup. Each player hatches and raises a pet; doing chores feeds, bathes, plays with and rests it. Built for a shared iPad, and plays on phones too.
+
+**Sharing with friends and family:** send them the link. Everyone who opens it gets their own fresh game saved on their own device, and nobody sees anyone else's data. A solo player can add a second player later from ⚙️ Settings.
 
 ## How it plays
 - **Hatch your pets.** Pick from 5 starter species, then tap your eggs to hatch them. Pets grow from baby → kid → adult as you level up, and 9 more species unlock along the way.
@@ -12,7 +14,8 @@ A two-player, co-op tamagotchi for household chores. Each of you hatches and rai
 - **🎈 Up for grabs.** Unclaimed inbox tasks can float on the Home screen, so whoever has the energy can grab one with a tap. Tap ↩️ to put a task back.
 - **👫 Together tasks.** Any recurring chore or inbox task can belong to both of you. It shows in both lists, and finishing it rewards both players and feeds both pets.
 - **Energy slider + "I could use some help".** When you're low, or you 🙋 flag a chore, your partner's pet delivers the message 💌 and their side shows **🤝 I'll do it** buttons. Low energy also puts your pet in *rest mode*, so its needs drop half as fast.
-- **Teamwork pays the most.** Helping earns 💗 hearts, the rarest currency, which buys love-only looks (🦄 Unicorn, Axolotl, Boo), rooms and accessories.
+- **Solo mode** skips the partner features. Solo players earn 💗 hearts by clearing everything due in a day (+2💗), plus gifts and the wheel.
+- **Teamwork pays the most.** In 2-player mode, helping earns 💗 hearts, the rarest currency, which buys love-only looks (🦄 Unicorn, Axolotl, Boo), rooms and accessories.
 
 ### The daily loop
 - ☀️ **3 daily quests** (one is always a teamwork quest). Each one pays both of you; claim all 3 for a 🧰 bonus gift each.
