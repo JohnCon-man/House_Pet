@@ -53,7 +53,8 @@ function allClear(p, r, notes) {
   const k = dayKey();
   if (p.clearDay === k || choresOf(p.id).some(x => x.i.k === 'over' || x.i.k === 'today')) return;
   p.clearDay = k; p.n.clear++; r.coins += 20; r.xp += 10;
-  notes.push('✅ All clear +20');
+  // Solo players have no partner to help, so clearing the day is how they earn hearts.
+  if (S().players.length === 1) { r.hearts = (r.hearts || 0) + 2; notes.push('✅ All clear +20 · +2💗'); } else notes.push('✅ All clear +20');
   ev({ type: 'clear', p });
 }
 
@@ -71,7 +72,8 @@ export function ensureDaily() {
   const k = dayKey();
   if (S().daily?.day === k) return;
   const r = rng(k), pool = [...QUESTS];
-  const picks = [TEAM_QUESTS[Math.floor(r() * TEAM_QUESTS.length)].id];
+  // Two players always get one teamwork quest; a solo player gets three regular ones.
+  const picks = S().players.length > 1 ? [TEAM_QUESTS[Math.floor(r() * TEAM_QUESTS.length)].id] : [];
   while (picks.length < 3) picks.push(pool.splice(Math.floor(r() * pool.length), 1)[0].id);
   S().daily = { day: k, quests: picks.map(id => ({ id, prog: 0, claimed: false })), who: [], chest: false, spun: [], lastPet: 0 };
 }
@@ -168,7 +170,7 @@ export function doInbox(id) {
   if (it.claimedBy === 'both') return doTogether({ title: it.title, catId: it.cat, inbox: true, urgent: it.urgent, finish: () => { S().inbox = S().inbox.filter(x => x !== it); } });
   const doer = P(it.claimedBy), q = partner(doer), stat = CATS[it.cat].stat;
   const r = { coins: 15 + (it.urgent ? 5 : 0), xp: 20, hearts: 0 }, notes = [];
-  feed(doer, stat, 30); feed(q, stat, 10);
+  feed(doer, stat, 30); if (q) feed(q, stat, 10);
   if (needsHelp(q)) { r.hearts += 1; doer.n.helped++; notes.push(`💗 Covered for ${q.name}`); emit('help'); }
   const sb = bumpStreak(doer); if (sb) { r.coins += sb; notes.push(`🔥 ${doer.streak}-day streak +${sb}`); }
   S().inbox = S().inbox.filter(x => x !== it);
