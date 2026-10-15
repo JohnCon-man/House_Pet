@@ -1,5 +1,6 @@
 // Game rules. Mutates store.S and pushes UI events (level ups, quests, unlocks) to `events`.
-import { STATS, CATS, HOUR, CARE, RP_STATS, SPECIES, QUESTS, TEAM_QUESTS, STICKERS, WHEEL, ACH, HOUSE, houseNeed, TREATS, ACCS, ROOMS } from './data.js';
+import { STATS, CATS, HOUR, CARE, RP_STATS, SPECIES, QUESTS, TEAM_QUESTS, STICKERS, WHEEL, ACH, HOUSE, houseNeed, TREATS, ROOMS } from './data.js';
+import { WARDROBE, HAIR } from './wardrobe.js';
 import { store, uid, clamp, today, dayKey, addDays, P, partner, health, xpNeed, needsHelp, choreInfo, choresOf } from './state.js';
 
 const S = () => store.S;
@@ -253,7 +254,7 @@ export function openGift(pid) {
   return out;
 }
 
-export const findItem = id => TREATS.find(x => x.id === id) || ACCS.find(x => x.id === id) || ROOMS.find(x => x.id === id) || SPECIES.find(x => x.id === id);
+export const findItem = id => TREATS.find(x => x.id === id) || WARDROBE.find(x => x.id === id) || HAIR.find(x => x.id === id) || ROOMS.find(x => x.id === id) || SPECIES.find(x => x.id === id);
 
 export function buy(id, pid) {
   const p = P(pid), x = findItem(id);
@@ -261,8 +262,12 @@ export function buy(id, pid) {
   p.coins -= x.coins || 0; p.hearts -= x.hearts || 0;
   if (x.use) { for (const k in x.use) feed(p, k, x.use[k]); log(`${p.name} treated ${p.pet.name} to ${x.e}`); return { x, kind: 'treat' }; }
   p.owned.push(x.id);
-  const kind = ACCS.includes(x) ? 'acc' : ROOMS.includes(x) ? 'room' : 'species';
-  if (kind === 'acc') p.pet.acc = x.id; else if (kind === 'room') p.pet.room = x.id; else p.pet.species = x.id;
+  const kind = WARDROBE.includes(x) ? 'wear' : HAIR.includes(x) ? 'hair' : ROOMS.includes(x) ? 'room' : 'species';
+  // Buying puts it straight on: clothes fill their slot, alongside whatever else is worn.
+  if (kind === 'wear') p.pet.outfit = { ...p.pet.outfit, [x.slot]: x.id };
+  else if (kind === 'hair') p.pet.hair = x.id;
+  else if (kind === 'room') p.pet.room = x.id;
+  else p.pet.species = x.id;
   log(`${p.name} unlocked ${x.e || ''} ${x.name}`);
   return { x, kind };
 }
