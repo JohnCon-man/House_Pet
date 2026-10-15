@@ -18,6 +18,19 @@ A tamagotchi for household chores. Play **solo (1 player)** or **co-op (2 player
 - **Solo mode** skips the partner features. Solo players earn 💗 hearts by clearing everything due in a day (+2💗), plus gifts and the wheel.
 - **Teamwork pays the most.** In 2-player mode, helping earns 💗 hearts, the rarest currency, which buys love-only looks (🦄 Unicorn, Axolotl, Boo), rooms and accessories.
 
+### Dress-up, rooms & the gothic side
+- **👗 Wardrobe with 7 slots worn at once:** hat, face, neck, body, back, held item, plus **💇 hair** (8 styles, 10 colors). Clothes are drawn to fit each pet's body, and every shop card previews *your* pet in the item.
+- **🦇 Gothic theme:** switch it on with the 🦇 button in the header or in ⚙️ Settings. It brings a dark palette, gothic lettering, bats and cobwebs instead of confetti, and spooky-cute pet chatter.
+- **Gothic unlockables:**
+  - Witch hats, mourning veils, horns, spiked chokers, bone necklaces, skeleton tees and black lace dresses.
+  - Vampire cloaks, bat, raven and moth wings, plus fireflies, moths and eyeballs in jars.
+  - Bat, moth, spider, skeleton-cat and black-cat looks.
+  - 16 "cabinet of curiosities" stickers.
+- **🏡 20 rooms:**
+  - Gothic: crypt, haunted manor, apothecary, moonlit cemetery, bone garden, moth sanctuary, bug terrarium, witch's cottage, gothic cathedral and Victorian parlor.
+  - Cozy: library, greenhouse, snowy cabin, plus the originals.
+  - Real pets can live in any room either player has unlocked.
+
 ### The daily loop
 - ☀️ **3 daily quests** (one is always a teamwork quest). Each one pays both of you; claim all 3 for a 🧰 bonus gift each.
 - 🎡 **Lucky wheel.** Each of you gets one spin a day, unlocked by your first chore.
@@ -45,6 +58,7 @@ Data is saved in the browser on that device. Use **Settings → Back up data / R
 | `src/data.js` | Game content: stats, chore types, species, shop, quests, stickers, wheel, trophies, pet lines |
 | `src/state.js` | Save/load, migration, selectors (due dates, moods, etc.) |
 | `src/game.js` | Rules: rewards, streaks, quests, gifts, wheel, house level, shop |
+| `src/wardrobe.js` | Clothing, hair and their drawings, layered by slot |
 | `src/pet.js` | Draws pets as SVG from parts and expressions |
 | `src/photo.js` | Turns a pet photo into a portrait and coat colors, on the device |
 | `src/fx.js` | Synth sound effects, particles, fly-to animations, splash banners |

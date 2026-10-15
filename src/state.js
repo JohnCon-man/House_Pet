@@ -1,5 +1,6 @@
 // Game state: persistence, migration and read-only selectors.
 import { KEY, DAY, STATS, COLORS, SPECIES, ROOMS, COATS, RP_STATS } from './data.js';
+import { slotOf } from './wardrobe.js';
 
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, v));
@@ -13,7 +14,7 @@ export const newPlayer = (id, name, pet, species, color) => ({
   id, name, color, coins: 20, hearts: 0, xp: 0, level: 1, streak: 0, lastDay: null, clearDay: null,
   capacity: 70, needHelp: false, owned: [], ach: [], gifts: 1, days: [],
   n: { done: 0, helped: 0, early: 0, inbox: 0, clear: 0, gifts: 0, together: 0, care: 0 },
-  pet: { name: pet, species, acc: null, room: 'home', food: 75, clean: 75, fun: 75, energy: 75, hatched: false },
+  pet: { name: pet, species, outfit: {}, hair: 'none', hairColor: '#2a2230', room: 'home', food: 75, clean: 75, fun: 75, energy: 75, hatched: false },
 });
 
 export function defaultState() {
@@ -26,7 +27,7 @@ export function defaultState() {
     ['Pay bills', 'admin', 'a', 30], ['Change bed sheets', 'laundry', 'b', 14],
   ];
   return {
-    v: 2, setup: false, sound: true, lastTick: Date.now(), log: [],
+    v: 2, setup: false, sound: true, theme: 'candy', lastTick: Date.now(), log: [],
     players: [newPlayer('a', 'Player 1', 'Mochi', 'cat', COLORS[0]), newPlayer('b', 'Player 2', 'Biscuit', 'dog', COLORS[1])],
     chores: seed.map(([title, cat, owner, every], i) =>
       ({ id: uid(), title, cat, owner, every, start: addDays(t, i % Math.min(every, 3)), lastDone: null, helpReq: false })),
@@ -52,6 +53,9 @@ export function migrate(s) {
     if (s.v < 2) p.pet.hatched = true;
     if (!SPECIES.some(x => x.id === p.pet.species)) p.pet.species = 'cat';
     if (!ROOMS.some(r => r.id === p.pet.room)) p.pet.room = 'home';
+    // One accessory → outfit slots (many items can be worn at once now).
+    if (p.pet.acc) { const slot = slotOf(p.pet.acc); if (slot) p.pet.outfit[slot] = p.pet.acc; }
+    delete p.pet.acc;
   });
   s.v = 2;
   return s;
@@ -76,7 +80,7 @@ export const xpNeed = l => 60 + l * 40;
 export const helpAsks = p => S().chores.filter(c => c.owner === p.id && c.helpReq);
 export const needsHelp = p => !!p && (p.needHelp || p.capacity < 35 || helpAsks(p).length > 0);
 export const streakNow = p => [dayKey(), dayKey(addDays(Date.now(), -1))].includes(p.lastDay) ? p.streak : 0;
-export const hasSpecies = (p, s) => s.lvl ? p.level >= s.lvl : s.hearts ? p.owned.includes(s.id) : true;
+export const hasSpecies = (p, s) => s.lvl ? p.level >= s.lvl : (s.hearts || s.coins) ? p.owned.includes(s.id) : true;
 export const capLabel = v => v < 20 ? ['🪫', 'Running on empty'] : v < 40 ? ['😮‍💨', 'Low battery'] : v < 70 ? ['🙂', 'Doing okay'] : v < 90 ? ['💪', 'Feeling good'] : ['🚀', 'Full tank'];
 export const stage = l => l < 4 ? 'baby' : l < 9 ? 'kid' : 'adult';
 export const isNight = (h = new Date().getHours()) => h >= 22 || h < 7;
@@ -104,7 +108,7 @@ export const inboxOf = id => S().inbox.filter(it => it.claimedBy === id || it.cl
 /* ---------- Real-life pets ---------- */
 export const newRealPet = (kind = 'dog', name = '') => ({
   id: 'rp-' + uid(), name: name || (kind === 'cat' ? 'Whiskers' : 'Buddy'), kind, coat: COATS[kind][0].id,
-  custom: null, photo: null, food: 80, joy: 80, fresh: 80, day: null, done: {},
+  custom: null, photo: null, room: 'home', food: 80, joy: 80, fresh: 80, day: null, done: {},
 });
 export const rpById = id => (S().realPets || []).find(r => r.id === id);
 // custom = colors read from a photo; otherwise the chosen preset coat.
@@ -112,7 +116,7 @@ export const coatOf = rp => {
   const preset = COATS[rp.kind].find(c => c.id === rp.coat) || COATS[rp.kind][0];
   return rp.custom ? { ...preset, ...rp.custom, spots: null, stripes: null } : preset;
 };
-export const rpModel = rp => ({ pet: { species: rp.kind, acc: null } });
+export const rpModel = rp => ({ pet: { species: rp.kind, outfit: {} } });
 export const rpHealth = rp => Object.keys(RP_STATS).reduce((a, k) => a + rp[k], 0) / 3;
 export const rpDone = (rp, key) => rp.day === dayKey() ? (rp.done[key] || 0) : 0;
 export const rpMood = rp => {

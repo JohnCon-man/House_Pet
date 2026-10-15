@@ -38,8 +38,13 @@ export function sfx(name) {
 /* ---------- Particles ---------- */
 const layer = () => document.getElementById('fx');
 
+// In the gothic theme, cheerful particles swap for spooky-cute ones.
+const GOTH = { '🎉': '🦇', '🎊': '🕸️', '💖': '🖤', '💕': '🖤', '⭐': '🌙', '🌟': '💀', '💫': '🕯️' };
+const theme = list => document.documentElement.classList.contains('goth') ? list.map(e => GOTH[e] || e) : list;
+
 export function confetti(emojis = ['🎉', '✨', '💖', '⭐', '🎊'], n = 28) {
   if (reduced()) return;
+  emojis = theme(emojis);
   const colors = ['#ff5d8f', '#3fa9ff', '#22c55e', '#f59e0b', '#8b5cf6', '#ffd166'];
   for (let i = 0; i < n; i++) {
     const s = document.createElement('span');
@@ -57,6 +62,7 @@ export function confetti(emojis = ['🎉', '✨', '💖', '⭐', '🎊'], n = 28
 
 export function burst(x, y, emojis = ['✨', '💖', '⭐'], n = 10, spread = 90) {
   if (reduced()) return;
+  emojis = theme(emojis);
   for (let i = 0; i < n; i++) {
     const s = document.createElement('span'), a = (Math.PI * 2 * i) / n + Math.random() * 0.5, d = spread * (0.6 + Math.random() * 0.6);
     s.className = 'spark'; s.textContent = emojis[i % emojis.length];

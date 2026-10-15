@@ -2,6 +2,7 @@
 import * as D from './data.js';
 import { store, save, esc, P, partner, solo, newPlayer, spec, xpNeed, needsHelp, helpAsks, streakNow, hasSpecies, capLabel, stage, timeOfDay, isNight, mood, choresOf, inboxOf, dueCount, ownerName, defaultState, migrate, dayKey, addDays, newRealPet, rpById, coatOf, rpModel, rpDone, rpMood } from './state.js';
 import { photoToPet } from './photo.js';
+import { WARDROBE, SLOTS, HAIR, HAIR_COLORS, hairById } from './wardrobe.js';
 import * as G from './game.js';
 import { petSVG, eggSVG } from './pet.js';
 import { sfx, confetti, burst, popText, fly, countUp, splash, center, wait } from './fx.js';
@@ -11,7 +12,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const S = () => store.S;
 const ui = {
   view: !S().setup ? 'setup' : S().players.every(p => p.pet.hatched) ? 'home' : 'hatch',
-  shopFor: 'a', focus: 'a', setupMode: 'solo', addingPlayer: false, hasPets: null, carePending: null, undo: null, react: {}, hatch: {}, gift: null, spinFor: null, modal: false,
+  shopFor: 'a', focus: 'a', setupMode: 'solo', addingPlayer: false, hasPets: null, carePending: null, shopTab: 'wardrobe', undo: null, react: {}, hatch: {}, gift: null, spinFor: null, modal: false,
 };
 const STAGE_SCALE = { baby: 0.74, kid: 0.88, adult: 1 };
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -44,6 +45,7 @@ function lineFor(p) {
   const q = partner(p);
   if (q && needsHelp(q) && Math.random() < 0.6) return pick(D.LINES.help).replace('{p}', q.name);
   const low = Object.keys(D.STATS).filter(k => p.pet[k] < 40);
+  if (!low.length && isGoth() && Math.random() < 0.5) return pick(D.LINES.goth);
   return low.length ? pick(D.LINES[pick(low)]) : pick(D.LINES.happy);
 }
 
@@ -69,9 +71,10 @@ function roomScene(p) {
   const spin = G.canSpin(p) ? `<button class="room-btn spin ready" data-act="wheel" data-p="${p.id}" aria-label="Spin the daily wheel">🎡<i>Spin!</i></button>`
     : S().daily?.spun.includes(p.id) ? '' : `<button class="room-btn spin locked" data-act="wheelLocked" aria-label="Wheel locked">🎡<i>🔒</i></button>`;
   const gift = p.gifts > 0 ? `<button class="room-btn gift" id="gift-${p.id}" data-act="gift" data-p="${p.id}" aria-label="Open gift">🎁<i>${p.gifts}</i></button>` : `<span class="room-btn ghost" id="gift-${p.id}"></span>`;
-  return `<div class="room tod-${tod}${room.dark ? ' dark' : ''}" style="--wall:${room.wall};--wall2:${room.wall2};--floor:${room.floor}">
+  const rdeco = (room.deco || []).map((e, i) => `<span class="rdeco r${i}">${e}</span>`).join('');
+  return `<div class="room tod-${tod}${room.dark ? ' dark' : ''} wp-${room.wp || 'dots'}" style="--wall:${room.wall};--wall2:${room.wall2};--floor:${room.floor}">
     <div class="window"><span class="sky-obj">${SKY[tod]}</span>${tod === 'night' ? '<span class="stars">✨</span>' : '<span class="cloud">☁️</span>'}</div>
-    ${decor}<div class="floor"></div><div class="rug" style="--c:${p.color}"></div>
+    ${decor}<div class="floor"></div>${rdeco}<div class="rug" style="--c:${p.color}"></div>
     <button class="pet-btn" id="pet-${p.id}" data-act="pet" data-p="${p.id}" aria-label="Cuddle ${esc(p.pet.name)}" style="--s:${STAGE_SCALE[stage(p.level)]}">${petSVG(p, petExp(p), { stage: stage(p.level) })}</button>
     <div class="speech" id="speech-${p.id}"></div>
     ${needsHelp(p) ? '<div class="sos">🆘</div>' : ''}
@@ -174,6 +177,9 @@ function rpExp(rp) {
   if (r && r.until > Date.now()) return r.exp;
   return isNight() ? 'sleep' : rpMood(rp).exp;
 }
+// Real pets can live in any free room, or any room either player has unlocked.
+const petRooms = () => D.ROOMS.filter(r => (!r.coins && !r.hearts) || S().players.some(p => p.owned.includes(r.id)));
+const rpRoom = rp => D.ROOMS.find(r => r.id === rp.room) || D.ROOMS[0];
 const rpSVG = (rp, exp) => petSVG(rpModel(rp), exp || rpExp(rp), { coat: coatOf(rp) });
 const meterColor = v => v >= 60 ? '#22c55e' : v >= 30 ? '#f59e0b' : '#ef4444';
 const joyIcon = rp => rp.kind === 'dog' ? '🦮' : '🧶';
@@ -196,7 +202,7 @@ function rpCard(rp) {
   const m = rpMood(rp), sleeping = isNight() && !ui.react[rp.id];
   const cares = Object.entries(D.CARE).filter(([, c]) => c.kinds.includes(rp.kind));
   return `<div class="rp-card" style="--rc:${coatOf(rp).body}">
-    <div class="rp-scene">
+    <div class="rp-scene room wp-${rpRoom(rp).wp || 'dots'}" style="${roomBg(rpRoom(rp))}"><div class="floor"></div>
       ${rp.photo ? `<img class="polaroid" src="${rp.photo}" alt="Photo of ${esc(rp.name)}">` : ''}
       <button class="pet-btn rp" id="pet-${rp.id}" data-act="rpPet" data-id="${rp.id}" aria-label="Cuddle ${esc(rp.name)}">${rpSVG(rp)}</button>
       <div class="speech" id="speech-${rp.id}"></div>
@@ -229,6 +235,8 @@ function rpEditor(rp) {
     <div class="rp-fields">
       <label>Pet’s name <input value="${esc(rp.name)}" data-chg="rpet.name" data-id="${rp.id}" maxlength="20"></label>
       <div class="seg">${['cat', 'dog'].map(k => `<button type="button" class="seg-b${rp.kind === k ? ' on' : ''}" data-act="rpKind" data-id="${rp.id}" data-k="${k}">${k === 'cat' ? '🐱 Cat' : '🐶 Dog'}</button>`).join('')}</div>
+      <span class="label">Home</span>
+      <div class="coats">${petRooms().map(r => `<button type="button" class="coat room-coat${rpRoom(rp).id === r.id ? ' on' : ''}" data-act="rpRoom" data-id="${rp.id}" data-r="${r.id}" title="${r.name}" aria-label="${r.name}" style="background:linear-gradient(${r.wall} 0 60%, ${r.floor} 60%)">${r.e}</button>`).join('')}</div>
       <span class="label">Coat</span>
       <div class="coats">${D.COATS[rp.kind].map(c => `<button type="button" class="coat${!rp.custom && rp.coat === c.id ? ' on' : ''}" data-act="rpCoat" data-id="${rp.id}" data-c="${c.id}" title="${c.name}" aria-label="${c.name}" style="background:${swatchBg(c)}"></button>`).join('')}</div>
       <div class="row rp-actions">
@@ -282,39 +290,61 @@ function inboxView() {
     }).join('') || '<li class="empty">📭 Inbox zero. Your pets are proud.</li>'}</ul></section>`;
 }
 
+const price = x => x.hearts ? `${x.hearts} 💗` : x.coins ? `${x.coins} 🪙` : 'Free';
+const isGoth = () => S().theme === 'goth';
+const roomBg = r => `--wall:${r.wall};--wall2:${r.wall2};--floor:${r.floor}`;
+
 function shopView() {
-  const p = P(ui.shopFor), room = D.ROOMS.find(r => r.id === p.pet.room);
-  const price = x => x.hearts ? `${x.hearts} 💗` : x.coins ? `${x.coins} 🪙` : 'Free';
+  const p = P(ui.shopFor), room = D.ROOMS.find(r => r.id === p.pet.room) || D.ROOMS[0], st = stage(p.level);
   const card = (inner, btn, cls = '') => `<div class="shop-item ${cls}">${inner}${btn}</div>`;
-  const treats = D.TREATS.map(x => card(`<span class="big">${x.e}</span><b>${x.name}</b><small>${Object.entries(x.use).map(([k, v]) => `+${v}${D.STATS[k].icon}`).join(' ')}</small>`,
-    `<button class="btn primary" data-act="buy" data-id="${x.id}">${price(x)}</button>`));
-  const accs = D.ACCS.map(x => {
-    const own = p.owned.includes(x.id), on = p.pet.acc === x.id;
-    return card(`<span class="big">${x.e}</span><b>${x.name}</b>`, own ? `<button class="btn${on ? ' on' : ''}" data-act="wear" data-id="${x.id}">${on ? 'Wearing ✓' : 'Wear'}</button>`
-      : `<button class="btn${x.hearts ? ' love' : ' primary'}" data-act="buy" data-id="${x.id}">${price(x)}</button>`, (on ? 'sel' : '') + (x.hearts ? ' lovely' : ''));
-  });
-  const looks = D.SPECIES.map(s => {
-    const has = hasSpecies(p, s), cur = p.pet.species === s.id;
-    const btn = cur ? '<button class="btn on">Current ✓</button>' : has ? `<button class="btn" data-act="species" data-id="${s.id}">Choose</button>`
-      : s.lvl ? `<button class="btn" disabled>🔒 Lv ${s.lvl}</button>` : `<button class="btn love" data-act="buy" data-id="${s.id}">${price(s)}</button>`;
-    return card(`<span class="look">${petSVG({ pet: { species: s.id } }, has ? 'happy' : 'ok')}</span><b>${s.name}</b>`, btn, (cur ? 'sel' : '') + (has ? '' : ' locked') + (s.hearts ? ' lovely' : ''));
-  });
-  const rooms = D.ROOMS.map(r => {
-    const has = !r.coins && !r.hearts || p.owned.includes(r.id), cur = p.pet.room === r.id;
-    const btn = cur ? '<button class="btn on">Home ✓</button>' : has ? `<button class="btn" data-act="room" data-id="${r.id}">Move in</button>`
-      : `<button class="btn${r.hearts ? ' love' : ' primary'}" data-act="buy" data-id="${r.id}">${price(r)}</button>`;
-    return card(`<span class="swatch" style="background:linear-gradient(${r.wall} 0 62%, ${r.floor} 62%)">${r.e}</span><b>${r.name}</b>`, btn, (cur ? 'sel' : '') + (r.hearts ? ' lovely' : ''));
-  });
+  const tag = x => x.goth ? '<i class="goth-tag" title="Gothic">🦇</i>' : '';
+  // A preview of *your* pet in an item: current species, hair and outfit with that piece swapped in.
+  const preview = pet => `<span class="look">${petSVG({ pet: { ...p.pet, ...pet } }, 'happy', { stage: st })}</span>`;
+  const buyBtn = x => `<button class="btn${x.hearts ? ' love' : ' primary'}" data-act="buy" data-id="${x.id}">${price(x)}</button>`;
+  const tabs = [['wardrobe', '👗 Wardrobe'], ['hair', '💇 Hair'], ['looks', '🐾 Looks'], ['rooms', '🏡 Rooms'], ['treats', '🍰 Treats']];
+  const worn = Object.values(p.pet.outfit || {}).filter(Boolean).length;
+  let body = '';
+  if (ui.shopTab === 'wardrobe') {
+    body = `<div class="row"><span class="muted">Mix and match: wear one piece from every slot at once.</span>${worn ? `<button class="btn" data-act="undress">🧺 Take it all off (${worn})</button>` : ''}</div>`
+      + SLOTS.map(([slot, label]) => `<h3>${label}</h3><div class="grid">${WARDROBE.filter(x => x.slot === slot).map(x => {
+        const own = p.owned.includes(x.id), on = p.pet.outfit?.[slot] === x.id;
+        return card(`${tag(x)}${preview({ outfit: { ...p.pet.outfit, [slot]: x.id } })}<b>${x.e} ${x.name}</b>`,
+          own ? `<button class="btn${on ? ' on' : ''}" data-act="wear" data-id="${x.id}">${on ? 'Wearing ✓' : 'Wear'}</button>` : buyBtn(x),
+          (on ? 'sel' : '') + (x.hearts ? ' lovely' : '') + (x.goth ? ' gothy' : ''));
+      }).join('')}</div>`).join('');
+  } else if (ui.shopTab === 'hair') {
+    body = `<h3>🎨 Hair color <small class="muted">free to change anytime</small></h3>
+      <div class="swatches hair-colors">${HAIR_COLORS.map(([c, n]) => `<button class="sw${p.pet.hairColor === c ? ' on' : ''}" style="background:${c}" data-act="hairColor" data-c="${c}" title="${n}" aria-label="${n}"></button>`).join('')}</div>
+      <h3>💇 Hairstyles</h3><div class="grid">${HAIR.map(h => {
+        const own = !h.coins || p.owned.includes(h.id), on = (p.pet.hair || 'none') === h.id;
+        return card(`${preview({ hair: h.id })}<b>${h.e} ${h.name}</b>`, on ? '<button class="btn on">Current ✓</button>' : own ? `<button class="btn" data-act="hair" data-id="${h.id}">Style</button>` : buyBtn(h), on ? 'sel' : '');
+      }).join('')}</div>`;
+  } else if (ui.shopTab === 'looks') {
+    body = `<p class="muted">Level up, or spend 🪙 and 💗, to unlock new looks. Your outfit and hair come along.</p><div class="grid">${D.SPECIES.map(sp => {
+      const has = hasSpecies(p, sp), cur = p.pet.species === sp.id;
+      const btn = cur ? '<button class="btn on">Current ✓</button>' : has ? `<button class="btn" data-act="species" data-id="${sp.id}">Choose</button>`
+        : sp.lvl ? `<button class="btn" disabled>🔒 Lv ${sp.lvl}</button>` : buyBtn(sp);
+      return card(`${tag(sp)}<span class="look">${petSVG({ pet: { species: sp.id } }, has ? 'happy' : 'ok')}</span><b>${sp.name}</b>`, btn, (cur ? 'sel' : '') + (has ? '' : ' locked') + (sp.hearts ? ' lovely' : '') + (sp.goth ? ' gothy' : ''));
+    }).join('')}</div>`;
+  } else if (ui.shopTab === 'rooms') {
+    body = `<div class="grid rooms-grid">${D.ROOMS.map(r => {
+      const has = !r.coins && !r.hearts || p.owned.includes(r.id), cur = p.pet.room === r.id;
+      const btn = cur ? '<button class="btn on">Home ✓</button>' : has ? `<button class="btn" data-act="room" data-id="${r.id}">Move in</button>` : buyBtn(r);
+      return card(`${tag(r)}<span class="room-thumb room wp-${r.wp || 'dots'}" style="${roomBg(r)}"><span class="floor"></span><span class="rt-deco">${(r.deco || [r.e]).join('')}</span></span><b>${r.e} ${r.name}</b>`, btn,
+        (cur ? 'sel' : '') + (r.hearts ? ' lovely' : '') + (r.goth ? ' gothy' : ''));
+    }).join('')}</div>`;
+  } else {
+    body = `<h3>🍰 Treats <small class="muted">instant boost for ${esc(p.pet.name)}</small></h3><div class="grid">${D.TREATS.map(x => card(`<span class="big">${x.e}</span><b>${x.name}</b><small>${Object.entries(x.use).map(([k, v]) => `+${v}${D.STATS[k].icon}`).join(' ')}</small>`,
+      `<button class="btn primary" data-act="buy" data-id="${x.id}">${price(x)}</button>`)).join('')}</div>`;
+  }
   return `<section class="card shop" style="--c:${p.color}">
-    <div class="shop-top"><div><h2>🛍️ Pet Shop</h2>${chips('shopFor', ui.shopFor)}
+    <div class="shop-top"><div><h2>🛍️ Pet Shop</h2>${solo() ? '' : chips('shopFor', ui.shopFor)}
       <p class="big-wallet"><span class="pill coin">🪙 <b>${p.coins}</b></span> <span class="pill heart">💗 <b>${p.hearts}</b></span></p>
-      <p class="muted">🪙 Coins come from chores. 💗 Hearts ${solo() ? 'come from clearing everything due in a day ✅, gifts and the wheel' : 'only come from helping your partner'} — they unlock the rarest stuff.</p></div>
-      <div class="dressing room" style="--wall:${room.wall};--wall2:${room.wall2};--floor:${room.floor}"><div class="floor"></div>
-        <button class="pet-btn" data-act="pet" data-p="${p.id}" style="--s:${STAGE_SCALE[stage(p.level)]}">${petSVG(p, 'happy', { stage: stage(p.level) })}</button></div></div>
-    <h3>🍰 Treats <small class="muted">instant boost for ${esc(p.pet.name)}</small></h3><div class="grid">${treats.join('')}</div>
-    <h3>🎀 Accessories</h3><div class="grid">${accs.join('')}</div>
-    <h3>🐾 Looks <small class="muted">level up or spend 💗 to unlock</small></h3><div class="grid">${looks.join('')}</div>
-    <h3>🏡 Rooms</h3><div class="grid">${rooms.join('')}</div></section>`;
+      <p class="muted">🪙 Coins come from chores. 💗 Hearts ${solo() ? 'come from clearing everything due in a day ✅, gifts and the wheel' : 'only come from helping your partner'}. They unlock the rarest stuff.</p></div>
+      <div class="dressing room wp-${room.wp || 'dots'}" style="${roomBg(room)}"><div class="floor"></div>
+        <button class="pet-btn" data-act="pet" data-p="${p.id}" style="--s:${STAGE_SCALE[st]}">${petSVG(p, 'happy', { stage: st })}</button></div></div>
+    <div class="shop-tabs">${tabs.map(([k, l]) => `<button class="chip${ui.shopTab === k ? ' on' : ''}" style="--c:${p.color}" data-act="shopTab" data-v="${k}">${l}</button>`).join('')}</div>
+    ${body}</section>`;
 }
 
 function albumView() {
@@ -365,6 +395,7 @@ function settingsView() {
     ${solo() ? `<section class="card"><h2>👫 Play with someone?</h2><p class="muted">Add a second player to share chores, help each other out and earn 💗 hearts together. Your pet and progress stay as they are.</p>
       <button class="btn primary" data-act="addPlayer">👫 Add a second player</button></section>` : ''}
     <section class="card"><h2>⚙️ App</h2><div class="row">
+      <button class="btn" data-act="theme">${isGoth() ? '🍬 Candy theme' : '🦇 Gothic theme'}</button>
       <button class="btn" data-act="sound">${S().sound ? '🔊 Sound on' : '🔇 Sound off'}</button>
       <button class="btn" data-act="export">💾 Back up data</button>
       <button class="btn" data-act="import">📦 Restore backup</button>
@@ -430,7 +461,8 @@ function render() {
   const h = S().house, harmony = Math.round(S().players.reduce((a, p) => a + (p.pet.food + p.pet.clean + p.pet.fun + p.pet.energy) / 4, 0) / S().players.length);
   const waiting = S().inbox.filter(i => !i.claimedBy).length;
   document.documentElement.classList.toggle('night', isNight());
-  $('#top').innerHTML = intro ? '' : `<div class="brand"><span class="logo">🏡</span><span class="title">House<span>Pet</span></span></div>
+  document.documentElement.classList.toggle('goth', isGoth());
+  $('#top').innerHTML = intro ? '' : `<div class="brand"><span class="logo">${isGoth() ? '🏚️' : '🏡'}</span><span class="title">House<span>Pet</span></span><button class="theme-btn" data-act="theme" title="Switch theme" aria-label="Switch theme">${isGoth() ? '🍬' : '🦇'}</button></div>
     <div class="meters">
       <div class="meter" title="House level"><span>🏠 Lv ${h.level}</span><div class="bar"><i style="width:${h.level >= D.HOUSE.length ? 100 : h.xp / D.houseNeed(h.level) * 100}%"></i></div></div>
       <div class="meter" title="Household harmony — the average of both pets"><span>☯️ ${harmony}%</span><div class="bar"><i class="harm" style="width:${harmony}%"></i></div></div>
@@ -661,7 +693,17 @@ const ACTIONS = {
     countUp($('.shop .pill.coin b'), before[ui.shopFor].c, P(ui.shopFor).coins);
     playEvents();
   },
-  wear: el => { const p = P(ui.shopFor); p.pet.acc = p.pet.acc === el.dataset.id ? null : el.dataset.id; sfx('pop'); save(); render(); },
+  wear: el => {
+    const p = P(ui.shopFor), it = WARDROBE.find(w => w.id === el.dataset.id);
+    p.pet.outfit = { ...p.pet.outfit, [it.slot]: p.pet.outfit?.[it.slot] === it.id ? null : it.id };
+    G.checkAch(); sfx('pop'); save(); render(); playEvents();
+  },
+  undress: () => { P(ui.shopFor).pet.outfit = {}; sfx('tap'); save(); render(); },
+  hair: el => { P(ui.shopFor).pet.hair = el.dataset.id; sfx('pop'); save(); render(); },
+  hairColor: el => { P(ui.shopFor).pet.hairColor = el.dataset.c; sfx('tap'); save(); render(); },
+  shopTab: el => { ui.shopTab = el.dataset.v; sfx('tap'); render(); },
+  theme: () => { S().theme = isGoth() ? 'candy' : 'goth'; save(); render(); sfx(isGoth() ? 'open' : 'pop'); if (isGoth()) confetti(['🦇', '🕸️', '🖤', '💀'], 24); },
+  rpRoom: el => { rpById(el.dataset.id).room = el.dataset.r; sfx('tap'); save(); rerender(); },
   room: el => { P(ui.shopFor).pet.room = el.dataset.id; sfx('pop'); save(); render(); },
   species: el => { P(ui.shopFor).pet.species = el.dataset.id; sfx('hatch'); save(); render(); confetti(['✨', '💖'], 14); },
   delChore: el => { snap(); S().chores = S().chores.filter(c => c.id !== el.dataset.id); save(); render(); toast('🗑️ Chore removed', true); },

@@ -1,4 +1,5 @@
 // Static game content: stats, chore types, pets, shop, quests, loot.
+import { WARDROBE, HAIR } from './wardrobe.js';
 
 export const KEY = 'housepet.v1', DAY = 864e5, HOUR = 36e5;
 
@@ -38,6 +39,12 @@ export const SPECIES = [
   { id: 'unicorn', name: 'Unicorn', ears: 'unicorn', body: '#ffffff', belly: '#fff0fb', accent: '#ffb3e6', hearts: 15 },
   { id: 'axolotl', name: 'Axolotl', ears: 'axolotl', body: '#ffb6d5', belly: '#ffe3ef', accent: '#ff5f9e', hearts: 25 },
   { id: 'ghost',   name: 'Boo',     ears: 'ghost',   body: '#f4f7ff', belly: '#f4f7ff', accent: '#a5b4fc', hearts: 35 },
+  // Gothic friends
+  { id: 'blackcat', name: 'Black cat', ears: 'cat',    body: '#3b3442', belly: '#6f6679', accent: '#ff9fb2', dark: true, iris: '#d4e157', coins: 80, goth: true },
+  { id: 'bat',      name: 'Bat',       ears: 'bat',    body: '#5b4a6e', belly: '#8f7da3', accent: '#3b3046', fangs: true, lvl: 2, goth: true },
+  { id: 'moth',     name: 'Moth',      ears: 'moth',   body: '#e9dcc5', belly: '#fff6e6', accent: '#b8a99a', coins: 150, goth: true },
+  { id: 'spider',   name: 'Spider',    ears: 'spider', body: '#3b3442', belly: '#5a4f63', accent: '#e63956', dark: true, iris: '#ff5d8f', fangs: true, coins: 220, goth: true },
+  { id: 'skelly',   name: 'Skelly cat', ears: 'cat',   body: '#f1ece0', belly: '#f1ece0', accent: '#3b3442', sockets: true, ribs: true, iris: '#7cf5ff', hearts: 30, goth: true },
 ];
 
 export const TREATS = [
@@ -48,18 +55,6 @@ export const TREATS = [
   { id: 'spa',   e: '💆', name: 'Spa day',     coins: 50, use: { food: 100, clean: 100, fun: 100, energy: 100 } },
 ];
 
-export const ACCS = [
-  { id: 'bow',    e: '🎀', name: 'Bow',          coins: 40 },
-  { id: 'cap',    e: '🧢', name: 'Cap',          coins: 60 },
-  { id: 'flower', e: '🌸', name: 'Flower',       coins: 60 },
-  { id: 'shades', e: '🕶️', name: 'Shades',       coins: 90, face: true },
-  { id: 'party',  e: '🎉', name: 'Party popper', coins: 100 },
-  { id: 'tophat', e: '🎩', name: 'Top hat',      coins: 120 },
-  { id: 'crown',  e: '👑', name: 'Crown',        coins: 250 },
-  { id: 'ring',   e: '💍', name: 'Promise ring', hearts: 10 },
-  { id: 'halo',   e: '😇', name: 'Halo',         hearts: 20, halo: true },
-];
-
 export const ROOMS = [
   { id: 'home',    e: '🏠', name: 'Cozy home', wall: '#ffe7d1', wall2: '#ffd4b0', floor: '#d9a273' },
   { id: 'mint',    e: '🌿', name: 'Mint loft', coins: 60,  wall: '#d6f5e6', wall2: '#b5ecd2', floor: '#c49a6c' },
@@ -68,6 +63,20 @@ export const ROOMS = [
   { id: 'galaxy',  e: '🌌', name: 'Galaxy',    coins: 200, wall: '#3b2f7a', wall2: '#6a4bc4', floor: '#2b2350', dark: true },
   { id: 'rainbow', e: '🌈', name: 'Rainbow',   hearts: 5,  wall: '#fff2b3', wall2: '#ffc9e0', floor: '#a7e3c4' },
   { id: 'castle',  e: '🏰', name: 'Castle',    hearts: 30, wall: '#eadcff', wall2: '#ffd9f0', floor: '#b39ddb' },
+  { id: 'library',   e: '📚', name: 'Old library',    coins: 100, wall: '#e8d7c3', wall2: '#d6bfa4', floor: '#8b5e3c', wp: 'shelves', deco: ['📚', '🕯️', '🪴'] },
+  { id: 'greenhouse',e: '🪴', name: 'Greenhouse',     coins: 90,  wall: '#d8f3dc', wall2: '#b7e4c7', floor: '#a68a64', wp: 'panes', deco: ['🌵', '🌼', '🪴'] },
+  { id: 'cabin',     e: '❄️', name: 'Snowy cabin',    coins: 110, wall: '#e3edf7', wall2: '#c8d8ea', floor: '#9c6b4a', wp: 'shelves', deco: ['☕', '🧣', '❄️'] },
+  // Gothic homes
+  { id: 'crypt',     e: '⚰️', name: 'Crypt',          coins: 120, wall: '#57506a', wall2: '#2f2a3a', floor: '#3a3442', wp: 'stone',  deco: ['⚰️', '🕯️', '🕸️'], dark: true, goth: true },
+  { id: 'manor',     e: '🏚️', name: 'Haunted manor',  coins: 180, wall: '#3b2346', wall2: '#24142e', floor: '#4a2c2a', wp: 'damask', deco: ['🕰️', '👻', '🕯️'], dark: true, goth: true },
+  { id: 'apothecary',e: '🫙', name: 'Apothecary',     coins: 150, wall: '#3d4a3a', wall2: '#263023', floor: '#5a4232', wp: 'shelves', deco: ['🫙', '🧪', '🫙'], dark: true, goth: true },
+  { id: 'cemetery',  e: '🪦', name: 'Moonlit cemetery', hearts: 10, wall: '#1f2340', wall2: '#3a3f6b', floor: '#2e3b2a', wp: 'stars', deco: ['🪦', '🦇', '🪦'], dark: true, goth: true },
+  { id: 'bonegarden', e: '🦴', name: 'Bone garden',    coins: 200, wall: '#2b3328', wall2: '#1c221a', floor: '#5c4a3a', wp: 'stone',  deco: ['💀', '🍄', '🦴'], dark: true, goth: true },
+  { id: 'moths',     e: '🦋', name: 'Moth sanctuary', coins: 140, wall: '#6d5a73', wall2: '#4b3d52', floor: '#3e3240', wp: 'damask', deco: ['🦋', '🌙', '🕯️'], dark: true, goth: true },
+  { id: 'terrarium', e: '🪲', name: 'Bug terrarium',  coins: 130, wall: '#2f4a33', wall2: '#1e3324', floor: '#4b3a28', wp: 'panes',  deco: ['🪲', '🕷️', '🐛'], dark: true, goth: true },
+  { id: 'cottage',   e: '🔮', name: 'Witch’s cottage', coins: 220, wall: '#4a3326', wall2: '#2e1f17', floor: '#3a2a20', wp: 'shelves', deco: ['🔮', '🧹', '🐈‍⬛'], dark: true, goth: true },
+  { id: 'cathedral', e: '🦇', name: 'Gothic cathedral', hearts: 25, wall: '#2a1f3d', wall2: '#5b2a4a', floor: '#2b2430', wp: 'arches', deco: ['🕯️', '🥀', '🕯️'], dark: true, goth: true },
+  { id: 'parlor',    e: '🥀', name: 'Victorian parlor', coins: 160, wall: '#5a1e2b', wall2: '#3a0f1a', floor: '#2e1b1b', wp: 'damask', deco: ['🖼️', '🥀', '🕰️'], dark: true, goth: true },
 ];
 
 // Shared house upgrades: every chore either of you does levels up the house.
@@ -103,6 +112,12 @@ export const STICKERS = [
   ...[['flamingo', '🦩'], ['octopus', '🐙'], ['planet', '🪐'], ['butterfly', '🦋'], ['sushi', '🍣'], ['whale', '🐳'], ['peacock', '🦚']]
     .map(([id, e]) => ({ id, e, r: 'rare' })),
   ...[['wand', '🪄'], ['gem', '💎'], ['comet', '☄️']].map(([id, e]) => ({ id, e, r: 'legendary' })),
+  // Cabinet of curiosities (gothic set)
+  ...[['skull', '💀'], ['bone', '🦴'], ['spider', '🕷️'], ['web', '🕸️'], ['bat', '🦇'], ['candle', '🕯️'], ['beetle', '🪲'], ['ladybug', '🐞']]
+    .map(([id, e]) => ({ id, e, r: 'common', goth: true })),
+  ...[['blackrose', '🥀'], ['coffin', '⚰️'], ['potion', '🧪'], ['crystal', '🔮'], ['grave', '🪦'], ['jar', '🫙']]
+    .map(([id, e]) => ({ id, e, r: 'rare', goth: true })),
+  ...[['eye', '👁️'], ['urn', '⚱️']].map(([id, e]) => ({ id, e, r: 'legendary', goth: true })),
 ];
 
 export const WHEEL = [
@@ -137,6 +152,10 @@ export const ACH = [
   { id: 'albumAll', e: '🌠', name: 'Completionist', desc: 'Complete the sticker album',    t: (p, S) => Object.keys(S.album).length >= STICKERS.length, coins: 300 },
   { id: 'house5',   e: '🏡', name: 'Homemakers',    desc: 'Reach house level 5',           t: (p, S) => S.house.level >= 5, coins: 60 },
   { pets: true, id: 'petparent', e: '🐾', name: 'Pet Parent', desc: 'Do 25 real pet-care tasks', t: p => (p.n.care || 0) >= 25, coins: 50 },
+  { id: 'fashion',  e: '👗', name: 'Fashionista',   desc: 'Own 10 outfit pieces or hairstyles', t: p => p.owned.filter(id => WARDROBE.some(w => w.id === id) || HAIR.some(h => h.id === id)).length >= 10, coins: 50 },
+  { id: 'layers',   e: '🧛', name: 'Dressed to Kill', desc: 'Wear 4 outfit pieces at once',      t: p => Object.values(p.pet.outfit || {}).filter(Boolean).length >= 4, coins: 40 },
+  { id: 'haunted',  e: '🏚️', name: 'Haunted Home',  desc: 'Own 3 gothic rooms',                  t: p => ROOMS.filter(r => r.goth && p.owned.includes(r.id)).length >= 3, coins: 60 },
+  { id: 'curios',   e: '🫙', name: 'Cabinet of Curiosities', desc: 'Find every gothic sticker',  t: (p, S) => STICKERS.filter(x => x.goth).every(x => S.album[x.id]), coins: 150 },
   { id: 'harmony',  e: '☯️', name: 'Harmony',       desc: 'Every pet above 85% at once',   t: (p, S, h) => S.players.every(q => h(q) >= 85), coins: 40 },
 ];
 
@@ -148,6 +167,8 @@ export const LINES = {
   happy: ['Best. Humans. Ever. 💖', 'I love our home! 🏡', 'You two make a great team!', 'Wheee! ✨', 'Our house is so cozy 🥰', 'Today feels like a good day ☀️'],
   help: ['{p} could use a hand 💌', 'Psst… {p} needs help! 🆘', 'Team up with {p}? 🤝'],
   night: ['zzz… 💤', '*snore* 🌙', 'mmm… five more minutes…'],
+  goth: ['The moths are restless tonight 🦋', 'I dreamt of bones 🦴', 'Every day is Halloween 🦇', 'I collected a beetle for you 🪲',
+    'This jar holds my secrets 🫙', 'Black is my favorite color. And darker black 🖤', 'The spiders say hi 🕷️', 'Let’s haunt the laundry pile 👻'],
   pet: ['Hehe! 💕', 'More scritches! 🥰', 'Purrrfect 😽', '*happy wiggle* ✨', 'I love you! 💖'],
 };
 
